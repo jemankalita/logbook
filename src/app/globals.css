@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Dark, Notion-like palette (matches your Notion + Chrome bookmark look). */
+:root {
+  --bg: #191919;
+  --panel: #202020;
+  --panel-2: #262626;
+  --line: #2f2f2f;
+  --fg: #e9e9e7;
+  --muted: #9b9a97;
+  --accent: #4f8cff;
+  --accent-ink: #ffffff;
+  --success: #39d353;
+  --danger: #ff6b6b;
+
+  /* GitHub-style contribution scale */
+  --heat-0: #262626;
+  --heat-1: #0e4429;
+  --heat-2: #006d32;
+  --heat-3: #26a641;
+  --heat-4: #39d353;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
