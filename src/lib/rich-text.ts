@@ -33,6 +33,22 @@ export function docToText(doc: unknown): string {
   return lines.join("\n").trim();
 }
 
+interface MarkNode extends DocNode {
+  marks?: { type?: string; attrs?: { href?: unknown } }[];
+}
+
+/** Every link href in a document (deduplicated), for the knowledge graph. */
+export function docLinks(doc: unknown): string[] {
+  if (!isDoc(doc)) return [];
+  const out = new Set<string>();
+  const walk = (node: MarkNode) => {
+    for (const m of node.marks ?? []) if (m.type === "link" && typeof m.attrs?.href === "string") out.add(m.attrs.href);
+    for (const child of (node.content ?? []) as MarkNode[]) walk(child);
+  };
+  walk(doc);
+  return [...out];
+}
+
 /** Plain text → a minimal document (paragraph per line). Used by importers. */
 export function textToDoc(text: string): DocNode {
   const paragraphs = text

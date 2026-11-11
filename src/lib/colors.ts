@@ -1,5 +1,8 @@
-/** A fixed palette that reads well on the dark theme; names map to a stable color. */
-export const PALETTE = ["#4f8cff", "#39d353", "#f59e0b", "#ec4899", "#a78bfa", "#22d3ee", "#f97316", "#84cc16", "#ef4444", "#14b8a6"];
+/**
+ * Categorical palette for the dark theme, in fixed order. Validated against the
+ * panel surface #202020 (lightness band, chroma, colour-blind separation, ≥3:1 contrast).
+ */
+export const PALETTE = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
 
 export function hashString(text: string): number {
   let h = 0;
