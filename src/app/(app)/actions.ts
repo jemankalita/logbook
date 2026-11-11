@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/auth/require-session";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 import { CALENDAR_TAG } from "@/lib/calendar/feeds";
 import { today } from "@/lib/dates";
+import { SESSIONS_VALID_AFTER, setSetting } from "@/lib/settings";
 
 export async function checkIn(): Promise<void> {
   await requireSession();
@@ -34,6 +35,15 @@ export async function refreshCalendar(): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
+  (await cookies()).delete(SESSION_COOKIE);
+  redirect("/login");
+}
+
+/** Revoke every session (all devices, including this one) by moving the cut-off to now. */
+export async function signOutEverywhere(): Promise<void> {
+  await requireSession();
+  // Tokens carry whole-second issue times; +1 makes anything issued up to now invalid.
+  await setSetting(SESSIONS_VALID_AFTER, Math.floor(Date.now() / 1000) + 1);
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/login");
 }

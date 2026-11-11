@@ -50,16 +50,25 @@ export const items = pgTable(
     image: text("image"),
     favicon: text("favicon"),
     body: jsonb("body"),
+    /** plain text of `body`, kept in sync for search */
+    bodyText: text("body_text"),
     status: itemStatus("status").notNull().default("unread"),
     starred: boolean("starred").notNull().default(false),
     actionable: boolean("actionable").notNull().default(false),
     deadline: date("deadline"),
     /** where it came from: "notion" | "chrome" | "x" | "web" | "manual" */
     source: text("source"),
+    /** last time we tried to read the page for a preview card (null = never) */
+    previewFetchedAt: timestamp("preview_fetched_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("items_folder_idx").on(t.folderId), index("items_created_idx").on(t.createdAt)],
+  (t) => [
+    index("items_folder_idx").on(t.folderId),
+    index("items_created_idx").on(t.createdAt),
+    index("items_url_idx").on(t.url),
+    index("items_kind_idx").on(t.kind),
+  ],
 );
 
 export const tags = pgTable("tags", {
@@ -96,6 +105,7 @@ export const tasks = pgTable(
     effort: effort("effort"),
     area: text("area"),
     parentId: uuid("parent_id").references((): AnyPgColumn => tasks.id, { onDelete: "cascade" }),
+    pathId: uuid("path_id").references((): AnyPgColumn => paths.id, { onDelete: "set null" }),
     dueDate: date("due_date"),
     /** null = one-off; "daily" | "weekdays" | "weekly" for habits */
     recurrence: text("recurrence"),
@@ -161,17 +171,56 @@ export const paths = pgTable("paths", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   emoji: text("emoji"),
+  description: text("description"),
   body: jsonb("body"),
+  bodyText: text("body_text"),
   position: integer("position").notNull().default(0),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/* ── Lists (Watchlist, People, …) ───────────────────────── */
+
+export const listKind = pgEnum("list_kind", ["watchlist", "people", "generic"]);
+export const entryStatus = pgEnum("entry_status", ["todo", "doing", "done"]);
+
+export const lists = pgTable("lists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  emoji: text("emoji"),
+  kind: listKind("kind").notNull().default("generic"),
+  position: integer("position").notNull().default(0),
+  createdAt: createdAt(),
+});
+
+export const listEntries = pgTable(
+  "list_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listId: uuid("list_id").notNull().references(() => lists.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    /** watchlist: movie/series/anime…; people: where you met / role */
+    subtitle: text("subtitle"),
+    url: text("url"),
+    notes: text("notes"),
+    status: entryStatus("status").notNull().default("todo"),
+    /** 1–5 */
+    rating: integer("rating"),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("list_entries_list_idx").on(t.listId)],
+);
 
 /* ── Journal, attendance, settings ──────────────────────── */
 
 export const journal = pgTable("journal", {
   day: date("day").primaryKey(),
   body: jsonb("body"),
+  bodyText: text("body_text"),
+  /** 1 (rough) … 5 (great) */
+  mood: integer("mood"),
   updatedAt: updatedAt(),
 });
 

@@ -29,15 +29,31 @@ export async function createSessionToken(): Promise<string> {
     .sign(secretKey());
 }
 
-export async function isValidSessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+export interface SessionInfo {
+  /** issued-at, unix seconds */
+  issuedAt: number;
+}
+
+/** Verified session details, or null when the token is missing, expired, or tampered with. */
+export async function readSessionToken(token: string | undefined): Promise<SessionInfo | null> {
+  if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"], issuer: ISSUER });
-    return payload.sub === "owner";
+    if (payload.sub !== "owner" || typeof payload.iat !== "number") return null;
+    return { issuedAt: payload.iat };
   } catch {
     // Expired, tampered, or misconfigured secret → treat as signed out.
-    return false;
+    return null;
   }
+}
+
+export async function isValidSessionToken(token: string | undefined): Promise<boolean> {
+  return (await readSessionToken(token)) !== null;
+}
+
+/** A session survives "sign out everywhere" only if it was issued at or after the cut-off. */
+export function isIssuedAfterCutoff(issuedAt: number, validAfter: number | null): boolean {
+  return validAfter === null || issuedAt >= validAfter;
 }
 
 const CONTROL_OR_BACKSLASH = /[\u0000-\u001f\u007f\\]/;
