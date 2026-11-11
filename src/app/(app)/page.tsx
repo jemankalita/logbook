@@ -8,6 +8,10 @@ import { getCalendarSnapshot, type SnapshotResult } from "@/lib/calendar/feeds";
 import { appTimezone, formatDay, today, type Day } from "@/lib/dates";
 import { buildHeatmap, computeStreaks, HEATMAP_MODES, parseMode, type ActivityInput, type HeatmapMode } from "@/lib/heatmap";
 import { getActivity, getAttendanceFor } from "@/lib/queries/activity";
+import { recentLinks } from "@/lib/queries/library";
+import { getHabits, getTodayTasks } from "@/lib/queries/tasks";
+import { ItemCard } from "@/components/library/item-card";
+import { DeadlinesCard, TodayCard } from "@/components/dashboard-cards";
 
 export const dynamic = "force-dynamic";
 
@@ -80,10 +84,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayDay = today();
   const now = new Date();
 
-  const [activity, todayAttendance, calendar] = await Promise.all([
+  const [activity, todayAttendance, calendar, recent, todayTasks, habits] = await Promise.all([
     getActivity(), // full history so streaks aren't capped at a year
     getAttendanceFor(todayDay),
     getCalendarSnapshot(todayDay),
+    recentLinks(4),
+    getTodayTasks(todayDay),
+    getHabits(todayDay),
   ]);
 
   const heatmap = buildHeatmap(todayDay, mode, activity, HEATMAP_WEEKS);
@@ -105,6 +112,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="grid gap-4 lg:grid-cols-2">
         <CheckInCard checkedInLabel={checkedInLabel} />
         <TodaySchedule result={calendar} todayDay={todayDay} timeZone={timeZone} now={now} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TodayCard todayDay={todayDay} tasks={todayTasks} habits={habits.scheduled} />
+        <DeadlinesCard todayDay={todayDay} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -138,9 +150,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           summary={`${plural(streaks.total, "active day")} in total, current streak ${plural(streaks.current, "day")}, ${thisMonth} this month.`}
         />
         {mode !== "attendance" && activity.tasksByDay.size === 0 ? (
-          <p className="mt-3 text-xs text-muted">Task counts appear here once the Tasks page lands in Phase 2.</p>
+          <p className="mt-3 text-xs text-muted">Tick off tasks and habits on the Tasks page and they&apos;ll show up here.</p>
         ) : null}
       </section>
+
+      {recent.length ? (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-medium">Recently saved</h2>
+            <Link href="/library" className="text-xs text-muted hover:text-fg">
+              Library →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {recent.map((item) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

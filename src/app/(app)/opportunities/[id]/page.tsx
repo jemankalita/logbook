@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { cls } from "@/components/cls";
+import { OppForm } from "@/components/opportunities/opp-ui";
+import { ConfirmButton } from "@/components/ui";
+import { uuid } from "@/lib/actions";
+import { getOpportunity } from "@/lib/queries/opportunities";
+import { deleteOpportunity } from "../actions";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const opp = uuid.safeParse(id).success ? await getOpportunity(id) : null;
+  return { title: `${opp?.name ?? "Opportunity"} · Logbook` };
+}
+
+export default async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!uuid.safeParse(id).success) notFound();
+  const opp = await getOpportunity(id);
+  if (!opp) notFound();
+
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col gap-5">
+      <Link href="/opportunities" className={`${cls.btnGhost} self-start`}>
+        <ArrowLeft className="size-4" aria-hidden /> Opportunities
+      </Link>
+      <h1 className={cls.h1}>{opp.name}</h1>
+      <section className={`${cls.card} p-4`}>
+        <OppForm opp={opp} />
+      </section>
+      <form action={deleteOpportunity.bind(null, opp.id)}>
+        <ConfirmButton message={`Delete “${opp.name}”?`}>
+          <Trash2 className="size-4" aria-hidden /> Delete
+        </ConfirmButton>
+      </form>
+    </div>
+  );
+}

@@ -184,6 +184,7 @@ export function TaskForm({
   parentId,
   defaultDue,
   compact = false,
+  pathId,
 }: {
   task?: Task;
   horizon: Horizon;
@@ -193,6 +194,8 @@ export function TaskForm({
   parentId?: string;
   defaultDue?: Day;
   compact?: boolean;
+  /** create the task inside this Path (hides the Path picker) */
+  pathId?: string;
 }) {
   const [state, action] = useActionState(task ? updateTask : createTask, null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -212,6 +215,7 @@ export function TaskForm({
     <form ref={formRef} action={action} className="flex flex-col gap-2">
       {task ? <input type="hidden" name="id" value={task.id} /> : null}
       <input type="hidden" name="horizon" value={horizon} />
+      {pathId ? <input type="hidden" name="pathId" value={pathId} /> : null}
       {parentId ?? task?.parentId ? <input type="hidden" name="parentId" value={parentId ?? task?.parentId ?? ""} /> : null}
       <div className="flex gap-2">
         <label className="sr-only" htmlFor={`t-title-${key}`}>
@@ -308,7 +312,7 @@ export function TaskForm({
               </select>
             </div>
           ) : null}
-          {options.paths.length ? (
+          {options.paths.length && !pathId ? (
             <div className={task ? "" : "col-span-2 sm:col-span-1"}>
               <label className={cls.label} htmlFor={`t-path-${key}`}>
                 Path

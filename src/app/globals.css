@@ -56,3 +56,101 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ── Rich-text editor (Notes, Journal, Paths) ───────────── */
+.prose-doc {
+  font-size: 0.975rem;
+  line-height: 1.7;
+}
+.prose-doc > * + * {
+  margin-top: 0.5em;
+}
+.prose-doc h1 {
+  font-size: 1.6rem;
+  font-weight: 650;
+  line-height: 1.25;
+  margin-top: 1.2em;
+}
+.prose-doc h2 {
+  font-size: 1.3rem;
+  font-weight: 620;
+  margin-top: 1em;
+}
+.prose-doc h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+.prose-doc ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.prose-doc ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.prose-doc ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.prose-doc ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+}
+.prose-doc ul[data-type="taskList"] li > label {
+  margin-top: 0.3em;
+  user-select: none;
+}
+.prose-doc ul[data-type="taskList"] li > label input {
+  accent-color: var(--success);
+  width: 1rem;
+  height: 1rem;
+}
+.prose-doc ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.prose-doc ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+.prose-doc blockquote {
+  border-left: 3px solid var(--line);
+  padding-left: 1em;
+  color: var(--muted);
+}
+.prose-doc code {
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875em;
+}
+.prose-doc pre {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+}
+.prose-doc pre code {
+  background: none;
+  padding: 0;
+}
+.prose-doc a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-doc hr {
+  border-color: var(--line);
+  margin: 1.5em 0;
+}
+.prose-doc p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  opacity: 0.6;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
