@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { attendance, items, journal, opportunities, taskCompletions, timeBlocks } from "@/db/schema";
 import { addDays, appTimezone, dayInTimezone, diffDays, formatDay, type Day } from "@/lib/dates";
 import { OPP_STATUS_LABELS, OPP_STATUSES } from "@/lib/opportunity-meta";
-import { minutesBetween, startOfWeek } from "@/lib/time";
+import { minutesBetween, startOfWeek, zonedToUtc } from "@/lib/time";
 
 export interface WeekPoint {
   week: Day;
@@ -63,7 +63,8 @@ export async function getInsights(today: Day): Promise<Insights> {
     db
       .select({ area: timeBlocks.area, startsAt: timeBlocks.startsAt, endsAt: timeBlocks.endsAt })
       .from(timeBlocks)
-      .where(and(eq(timeBlocks.done, true), gte(timeBlocks.startsAt, new Date(`${addDays(today, -AREA_DAYS)}T00:00:00Z`)))),
+      // Exactly AREA_DAYS days including today, from local midnight in the app's timezone.
+      .where(and(eq(timeBlocks.done, true), gte(timeBlocks.startsAt, zonedToUtc(addDays(today, -(AREA_DAYS - 1)), "00:00", tz)))),
     db.select({ day: journal.day, mood: journal.mood }).from(journal).where(and(isNotNull(journal.mood), gte(journal.day, addDays(today, -MOOD_DAYS)))),
     db.select({ n: count() }).from(items).where(eq(items.kind, "note")),
     db.select({ n: count() }).from(journal).where(and(isNotNull(journal.bodyText), gte(journal.day, addDays(today, -29)))),

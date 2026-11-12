@@ -10,7 +10,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { attendance, folders, importMap, items, itemTags, journal, listEntries, lists, opportunities, paths, tags, taskCompletions, tasks, timeBlocks } from "@/db/schema";
 import { dayInTimezone, isDay } from "@/lib/dates";
-import { docToText, type DocNode } from "@/lib/rich-text";
+import { docToText, isDoc, type DocNode } from "@/lib/rich-text";
 import type { NotionApi } from "./client";
 import {
   blocksToDoc,
@@ -22,6 +22,7 @@ import {
   dayOf,
   effortOf,
   isDateTime,
+  toInstant,
   itemTypeOf,
   oppStatusOf,
   oppTypeOf,
@@ -46,6 +47,8 @@ const ROWS_PER_CHUNK_WITH_BODY = 10;
 const ROW_BODY_REQUESTS = 6;
 const PAGE_BODY_REQUESTS = 60;
 const DEFAULT_BLOCK_MINUTES = 60;
+const ROOT_SCAN_REQUESTS = 40;
+const PAGE_SCAN_REQUESTS = 10;
 const NOTES_FOLDER = "Notion pages";
 
 export interface NotionSource {
@@ -60,7 +63,15 @@ export interface NotionSource {
 export interface ChunkResult {
   added: number;
   skipped: number;
+  /** Rows that errored; they aren't marked imported, so a later run retries them. */
+  failed: number;
   nextCursor: string | null;
+}
+
+export interface Discovery {
+  sources: NotionSource[];
+  /** True when a page was too long to read fully, so some databases/pages may be missing. */
+  truncated: boolean;
 }
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -85,9 +96,13 @@ function findDatabases(blocks: NotionBlock[], out: NotionBlock[] = []): NotionBl
   return out;
 }
 
-export async function discoverSources(api: NotionApi, rootId: string): Promise<NotionSource[]> {
+export async function discoverSources(api: NotionApi, rootId: string): Promise<Discovery> {
   const sources: NotionSource[] = [];
   const seen = new Set<string>();
+  let truncated = false;
+  const onTruncated = () => {
+    truncated = true;
+  };
   const add = (s: NotionSource) => {
     if (seen.has(s.id)) return;
     seen.add(s.id);
@@ -110,17 +125,17 @@ export async function discoverSources(api: NotionApi, rootId: string): Promise<N
       if (b.children?.length) walk(b.children);
     }
   };
-  walk(await api.blocks(rootId, { deep: true, maxRequests: 15 }));
+  walk(await api.blocks(rootId, { deep: true, maxRequests: ROOT_SCAN_REQUESTS, onTruncated }));
 
   // Databases inside a sub-page (e.g. a research tracker) become Library folders under that page's name.
   for (const p of pages) {
-    for (const b of findDatabases(await api.blocks(p.id, { deep: true, maxRequests: 4 }))) {
+    for (const b of findDatabases(await api.blocks(p.id, { deep: true, maxRequests: PAGE_SCAN_REQUESTS, onTruncated }))) {
       const title = titleOf(b) || "Untitled database";
       const kind = classifyDatabase(title);
       add({ id: b.id, title, kind, isDatabase: true, parent: kind === "library" ? cleanTitle(p.title) : null });
     }
   }
-  return sources;
+  return { sources, truncated };
 }
 
 /* ── Shared write helpers ───────────────────────────────── */
@@ -227,11 +242,13 @@ const taskWriter =
     return { entity: "task", entityId: created.id };
   };
 
-const writeTimeBlock: Writer = async (tx, _page, row) => {
+const writeTimeBlock: Writer = async (tx, _page, row, _blocks, ctx) => {
   const when = pick(row.dates, "when", "time", "date", "slot") ?? Object.values(row.dates)[0];
   if (!when || !isDateTime(when.start)) return null; // all-day entries have no time slot to place
-  const startsAt = new Date(when.start);
-  let endsAt = when.end && isDateTime(when.end) ? new Date(when.end) : null;
+  const zone = when.timeZone ?? ctx.timeZone;
+  const startsAt = toInstant(when.start, zone);
+  if (!startsAt) throw new Error(`Unreadable time “${when.start}”.`);
+  let endsAt = when.end && isDateTime(when.end) ? toInstant(when.end, zone) : null;
   if (!endsAt || endsAt <= startsAt) endsAt = new Date(startsAt.getTime() + DEFAULT_BLOCK_MINUTES * 60_000);
   const task = pick(row.texts, "task");
   const notes = [task, pick(row.texts, "notes", "note")].filter(Boolean).join("\n");
@@ -286,9 +303,18 @@ const writeJournal: Writer = async (tx, page, row, blocks, ctx) => {
   const moodValue = pick(row.numbers, "mood", "energy", "rating");
   const mood = moodValue && Number.isInteger(moodValue) && moodValue >= 1 && moodValue <= 5 ? moodValue : null;
 
-  const [existing] = await tx.select({ text: journal.bodyText }).from(journal).where(eq(journal.day, day)).limit(1);
-  if (!existing) await tx.insert(journal).values({ day, body, bodyText: text || null, mood });
-  else if (!existing.text && text) await tx.update(journal).set({ body, bodyText: text, ...(mood ? { mood } : {}) }).where(eq(journal.day, day));
+  const [existing] = await tx.select({ body: journal.body, text: journal.bodyText, mood: journal.mood }).from(journal).where(eq(journal.day, day)).limit(1);
+  if (!existing) {
+    await tx.insert(journal).values({ day, body, bodyText: text || null, mood });
+  } else if (text || (mood && !existing.mood)) {
+    // Several Notion rows (or an entry you already wrote) on the same day: append, never overwrite.
+    const merged = existing.text && body && isDoc(existing.body) ? { type: "doc", content: [...(existing.body.content ?? []), { type: "horizontalRule" }, ...(body.content ?? [])] } : (body ?? existing.body);
+    const mergedText = [existing.text, text].filter(Boolean).join("\n\n") || null;
+    await tx
+      .update(journal)
+      .set({ body: merged, bodyText: mergedText, mood: existing.mood ?? mood })
+      .where(eq(journal.day, day));
+  }
   // A logged day is a day you showed up.
   await tx.insert(attendance).values({ day, checkedInAt: dateOf(page.created_time), note: "Imported from Notion" }).onConflictDoNothing();
   return { entity: "journal", entityId: day };
@@ -332,7 +358,7 @@ async function writePage(tx: Tx, source: NotionSource, blocks: NotionBlock[], em
 
 async function importDatabaseChunk(db: Db, api: NotionApi, source: NotionSource, cursor: string | null, timeZone: string): Promise<ChunkResult> {
   const writer = ROW_WRITERS[source.kind];
-  if (!writer) return { added: 0, skipped: 0, nextCursor: null };
+  if (!writer) return { added: 0, skipped: 0, failed: 0, nextCursor: null };
   const withBody = NEEDS_BODY.has(source.kind);
   const { results, nextCursor } = await api.queryDatabase(source.id, cursor, withBody ? ROWS_PER_CHUNK_WITH_BODY : ROWS_PER_CHUNK);
   const done = await alreadyImported(
@@ -353,22 +379,29 @@ async function importDatabaseChunk(db: Db, api: NotionApi, source: NotionSource,
 
   let added = 0;
   let skipped = done.size;
+  let failed = 0;
   await db.transaction(async (tx) => {
     for (const page of todo) {
-      const res = await writer(tx, page, readRow(page), bodies.get(page.id) ?? [], { timeZone, folderId });
-      if (!res) {
-        skipped++;
-        continue;
+      // Each row in its own savepoint: one bad row is rolled back alone and reported, not retried forever.
+      try {
+        const written = await tx.transaction(async (sp) => {
+          const res = await writer(sp, page, readRow(page), bodies.get(page.id) ?? [], { timeZone, folderId });
+          if (res) await remember(sp, page.id, res.entity, res.entityId);
+          return res;
+        });
+        if (written) added++;
+        else skipped++;
+      } catch (err) {
+        failed++;
+        console.error(`[notion] row ${page.id} in “${source.title}” failed`, err);
       }
-      await remember(tx, page.id, res.entity, res.entityId);
-      added++;
     }
   });
-  return { added, skipped, nextCursor };
+  return { added, skipped, failed, nextCursor };
 }
 
 async function importPage(db: Db, api: NotionApi, source: NotionSource): Promise<ChunkResult> {
-  if ((await alreadyImported(db, [source.id])).size) return { added: 0, skipped: 1, nextCursor: null };
+  if ((await alreadyImported(db, [source.id])).size) return { added: 0, skipped: 1, failed: 0, nextCursor: null };
   const blocks = await api.blocks(source.id, { maxRequests: PAGE_BODY_REQUESTS });
   let emoji: string | null = null;
   try {
@@ -384,11 +417,11 @@ async function importPage(db: Db, api: NotionApi, source: NotionSource): Promise
     await remember(tx, source.id, res.entity, res.entityId);
     added = 1 + res.entries;
   });
-  return { added, skipped: 0, nextCursor: null };
+  return { added, skipped: 0, failed: 0, nextCursor: null };
 }
 
 export async function importChunk(db: Db, api: NotionApi, source: NotionSource, cursor: string | null, timeZone: string): Promise<ChunkResult> {
-  if (source.kind === "skip") return { added: 0, skipped: 0, nextCursor: null };
+  if (source.kind === "skip") return { added: 0, skipped: 0, failed: 0, nextCursor: null };
   const isDatabaseKind = DATABASE_KINDS.includes(source.kind);
   if (source.isDatabase !== isDatabaseKind) {
     throw new Error(`“${source.title}” is a ${source.isDatabase ? "database" : "page"} — pick a ${source.isDatabase ? "database" : "page"} type for it.`);

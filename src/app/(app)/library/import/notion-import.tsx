@@ -7,7 +7,7 @@ import { DATABASE_KINDS, SOURCE_KIND_LABELS, SOURCE_KINDS, type SourceKind } fro
 import type { NotionSource } from "@/lib/import/notion/importer";
 import { importNotionChunk, scanNotion } from "./notion-actions";
 
-type RowState = { status: "pending" | "running" | "done" | "error"; added: number; skipped: number; cursor: string | null; error?: string };
+type RowState = { status: "pending" | "running" | "done" | "error"; added: number; skipped: number; failed: number; cursor: string | null; error?: string };
 
 const PAGE_KINDS = SOURCE_KINDS.filter((k) => !DATABASE_KINDS.includes(k));
 const DB_KINDS = SOURCE_KINDS.filter((k) => DATABASE_KINDS.includes(k) || k === "skip");
@@ -22,6 +22,7 @@ function Progress({ row, skip }: { row: RowState | undefined; skip: boolean }) {
 export function NotionImport({ configured }: { configured: boolean }) {
   const router = useRouter();
   const [sources, setSources] = useState<NotionSource[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [scanning, setScanning] = useState(false);
   const [running, setRunning] = useState(false);
@@ -35,7 +36,8 @@ export function NotionImport({ configured }: { configured: boolean }) {
     setScanning(false);
     if (!res.ok) return setError(res.error);
     setSources(res.sources);
-    setRows(Object.fromEntries(res.sources.map((s) => [s.id, { status: "pending", added: 0, skipped: 0, cursor: null }])));
+    setTruncated(res.truncated);
+    setRows(Object.fromEntries(res.sources.map((s) => [s.id, { status: "pending", added: 0, skipped: 0, failed: 0, cursor: null }])));
   }
 
   const setKind = (id: string, kind: SourceKind) => setSources((list) => list?.map((s) => (s.id === id ? { ...s, kind } : s)) ?? null);
@@ -43,7 +45,7 @@ export function NotionImport({ configured }: { configured: boolean }) {
 
   /** Import one source chunk by chunk. Returns false if it stopped on an error. */
   async function importSource(s: NotionSource, start: RowState): Promise<boolean> {
-    let { cursor, added, skipped } = start;
+    let { cursor, added, skipped, failed } = start;
     patch(s.id, { status: "running", error: undefined });
     while (!stop.current) {
       const res = await importNotionChunk(s, cursor);
@@ -54,11 +56,12 @@ export function NotionImport({ configured }: { configured: boolean }) {
       }
       added += res.added;
       skipped += res.skipped;
+      failed += res.failed;
       cursor = res.nextCursor;
-      patch(s.id, { status: cursor ? "running" : "done", added, skipped, cursor });
+      patch(s.id, { status: cursor ? "running" : "done", added, skipped, failed, cursor });
       if (!cursor) return true;
     }
-    patch(s.id, { status: "pending", cursor, added, skipped });
+    patch(s.id, { status: "pending", cursor, added, skipped, failed });
     return true;
   }
 
@@ -97,6 +100,11 @@ export function NotionImport({ configured }: { configured: boolean }) {
       ) : (
         <>
           <p className="text-sm text-muted">Found {sources.length} databases and pages. Check where each one should go, then import. Anything already imported is skipped, so it&apos;s safe to run again.</p>
+          {truncated ? (
+            <p role="status" className="rounded-lg border border-line bg-panel-2 p-2 text-xs text-muted">
+              Some Notion pages were too long to scan completely, so a few databases may be missing from this list. Sub-pages nested two levels deep aren&apos;t scanned either — connect the integration to those pages and set NOTION_ROOT_PAGE to them for a second pass.
+            </p>
+          ) : null}
           <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead className="bg-panel-2 text-left text-xs text-muted">
@@ -132,6 +140,7 @@ export function NotionImport({ configured }: { configured: boolean }) {
                       <td className="tabular px-3 py-2 text-right text-xs">
                         <Progress row={r} skip={s.kind === "skip"} />
                         {r?.skipped ? <span className="block text-muted">{r.skipped} skipped</span> : null}
+                        {r?.failed ? <span className="block text-danger">{r.failed} failed — run again to retry</span> : null}
                       </td>
                     </tr>
                   );

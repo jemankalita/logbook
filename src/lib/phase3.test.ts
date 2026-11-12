@@ -10,6 +10,8 @@ import { addDays, today } from "./dates";
 import { parseChromeBookmarks, topLevelNodes } from "./import/chrome-bookmarks";
 import { importBookmarkTree } from "./import/import-bookmarks";
 import { getActivity } from "./queries/activity";
+import { getGraph } from "./queries/graph";
+import { getInsights } from "./queries/insights";
 import { getFolderTree } from "./queries/library";
 import { countdownLabel, upcomingDeadlines } from "./queries/opportunities";
 import { searchEverything } from "./queries/search";
@@ -128,5 +130,37 @@ describe("deadlines and search", () => {
 
   it("treats LIKE wildcards literally", async () => {
     expect(await searchEverything("%%")).toEqual([]);
+  });
+});
+
+describe("knowledge graph + insights queries", () => {
+  it("connects a note to the saved link it mentions (links extracted by Postgres jsonpath)", async () => {
+    const [link] = await db.insert(schema.items).values({ kind: "link", title: "Graph target", url: "https://graph.example/paper" }).returning();
+    const href = (h: string) => ({ type: "text", text: "see", marks: [{ type: "link", attrs: { href: h } }] });
+    const body = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [href("https://graph.example/paper")] },
+        { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [href(`/library/${link.id}`)] }] }] },
+      ],
+    };
+    const [note] = await db.insert(schema.items).values({ kind: "note", type: "note", title: "Graph note", body }).returning();
+
+    const graph = await getGraph(false);
+    const edge = graph.edges.find((e) => [e.source, e.target].includes(`item:${note.id}`) && [e.source, e.target].includes(`item:${link.id}`));
+    expect(edge).toBeDefined();
+    expect(graph.nodes.find((n) => n.id === `item:${note.id}`)?.degree).toBeGreaterThanOrEqual(1);
+  });
+
+  it("builds insights without errors and counts hours only from done blocks", async () => {
+    const t = today();
+    const start = new Date(`${t}T04:00:00Z`);
+    await db.insert(schema.timeBlocks).values([
+      { title: "Deep work", area: "DSA", startsAt: start, endsAt: new Date(start.getTime() + 90 * 60_000), done: true },
+      { title: "Skipped", area: "DSA", startsAt: start, endsAt: new Date(start.getTime() + 60 * 60_000), done: false },
+    ]);
+    const data = await getInsights(t);
+    expect(data.tasksPerWeek).toHaveLength(26);
+    expect(data.hoursByArea.find((a) => a.name === "DSA")?.value).toBe(1.5);
   });
 });

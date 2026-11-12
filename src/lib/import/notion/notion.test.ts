@@ -194,7 +194,7 @@ async function runAll(sources: NotionSource[]) {
 
 describe("Notion import (integration)", () => {
   it("discovers databases and pages, including databases nested in a sub-page", async () => {
-    const sources = await discoverSources(fakeApi, "root");
+    const { sources } = await discoverSources(fakeApi, "root");
     const byId = Object.fromEntries(sources.map((s) => [s.id, s]));
     expect(byId["db-tasks"].kind).toBe("tasks_daily");
     expect(byId["db-tt"].kind).toBe("timetable");
@@ -206,7 +206,7 @@ describe("Notion import (integration)", () => {
   });
 
   it("imports everything into the right places, and a second run adds nothing", async () => {
-    const sources = await discoverSources(fakeApi, "root");
+    const { sources } = await discoverSources(fakeApi, "root");
     const first = await runAll(sources);
     expect(first).toBeGreaterThan(0);
 
@@ -251,6 +251,40 @@ describe("Notion import (integration)", () => {
     expect(second).toBe(0);
     expect(await db.select().from(schema.tasks)).toHaveLength(2);
     expect(await db.select().from(schema.paths)).toHaveLength(1);
+  });
+
+  it("merges two Daily Log rows for the same day instead of dropping one", async () => {
+    DB_ROWS["db-log"] = [
+      page("j1", { Name: title("Morning"), Date: date("2026-10-05"), Wins: text("Shipped the heatmap") }),
+      page("j2", { Name: title("Evening"), Date: date("2026-10-05"), Wins: text("Read two papers") }),
+    ];
+    const res = await importChunk(db, fakeApi, { id: "db-log", title: "Daily Log", kind: "journal", isDatabase: true, parent: null }, null, "Asia/Kolkata");
+    expect(res.added).toBe(2);
+    const [entry] = await db.select().from(schema.journal).where(eq(schema.journal.day, "2026-10-05"));
+    expect(entry.bodyText).toContain("Shipped the heatmap");
+    expect(entry.bodyText).toContain("Read two papers");
+    expect(await db.select().from(schema.attendance).where(eq(schema.attendance.day, "2026-10-05"))).toHaveLength(1);
+  });
+
+  it("keeps importing the rest of a chunk when one row fails, and doesn't mark the bad row as done", async () => {
+    DB_ROWS["db-tt2"] = [
+      page("bad", { Block: title("Broken"), When: date("2026-13-45T09:00:00.000+05:30") }),
+      page("good", { Block: title("Floating time"), When: { type: "date", date: { start: "2026-10-06T09:00:00.000", end: null, time_zone: "Asia/Kolkata" } } as NotionProperty }),
+    ];
+    const res = await importChunk(db, fakeApi, { id: "db-tt2", title: "Time Table 2", kind: "timetable", isDatabase: true, parent: null }, null, "UTC");
+    expect(res).toMatchObject({ added: 1, failed: 1, nextCursor: null });
+    const [block] = await db.select().from(schema.timeBlocks).where(eq(schema.timeBlocks.title, "Floating time"));
+    // 09:00 in Asia/Kolkata, not 09:00 server time.
+    expect(block.startsAt.toISOString()).toBe("2026-10-06T03:30:00.000Z");
+    const mapped = await db.select().from(schema.importMap).where(eq(schema.importMap.externalId, "bad"));
+    expect(mapped).toHaveLength(0);
+  });
+
+  it("reports when the scan ran out of request budget", async () => {
+    const truncatingApi: NotionApi = { ...fakeApi, blocks: async (id, opts) => (opts?.onTruncated?.(), structuredClone(PAGE_BLOCKS[id] ?? [])) };
+    const { truncated } = await discoverSources(truncatingApi, "root");
+    expect(truncated).toBe(true);
+    expect((await discoverSources(fakeApi, "root")).truncated).toBe(false);
   });
 
   it("refuses a page/database type mismatch", async () => {

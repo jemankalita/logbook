@@ -28,13 +28,29 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
   const [hidden, setHidden] = useState<Set<GraphKind>>(new Set());
   const [hover, setHover] = useState<SimNode | null>(null);
   const [query, setQuery] = useState("");
+  // The highlight text is read by the draw loop through a ref, so typing only redraws —
+  // it doesn't rebuild the simulation (which would reset the layout, zoom and hover).
+  const queryRef = useRef("");
+  const redrawRef = useRef<() => void>(() => {});
 
   const view = useMemo(() => {
-    const nodes: SimNode[] = data.nodes.filter((n) => !hidden.has(n.kind)).map((n) => ({ ...n }));
+    const nodes: GraphNode[] = data.nodes.filter((n) => !hidden.has(n.kind));
     const ids = new Set(nodes.map((n) => n.id));
-    const links: SimLink[] = data.edges.filter((e) => ids.has(e.source) && ids.has(e.target)).map((e) => ({ ...e }));
-    return { nodes, links };
+    const edges = data.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+    const neighbours = new Map<string, Set<string>>();
+    for (const e of edges) {
+      if (!neighbours.has(e.source)) neighbours.set(e.source, new Set());
+      if (!neighbours.has(e.target)) neighbours.set(e.target, new Set());
+      neighbours.get(e.source)!.add(e.target);
+      neighbours.get(e.target)!.add(e.source);
+    }
+    return { nodes, edges, neighbours };
   }, [data, hidden]);
+
+  useEffect(() => {
+    queryRef.current = query.trim().toLowerCase();
+    redrawRef.current();
+  }, [query]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,7 +67,10 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     let dragging: SimNode | null = null;
     let panning: { x: number; y: number } | null = null;
     let moved = false;
-    const q = query.trim().toLowerCase();
+    // d3 mutates nodes/links in place, so every run gets fresh copies.
+    const nodes: SimNode[] = view.nodes.map((n) => ({ ...n }));
+    const links: SimLink[] = view.edges.map((e) => ({ source: e.source, target: e.target }));
+    const neighbours = view.neighbours;
 
     const resize = () => {
       width = wrap.clientWidth;
@@ -63,24 +82,15 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     };
     resize();
 
-    const neighbours = new Map<string, Set<string>>();
-    for (const l of view.links) {
-      const s = l.source as string;
-      const t = l.target as string;
-      if (!neighbours.has(s)) neighbours.set(s, new Set());
-      if (!neighbours.has(t)) neighbours.set(t, new Set());
-      neighbours.get(s)!.add(t);
-      neighbours.get(t)!.add(s);
-    }
-
-    const sim = forceSimulation<SimNode>(view.nodes)
-      .force("link", forceLink<SimNode, SimLink>(view.links).id((d) => d.id).distance(40).strength(0.4))
+    const sim = forceSimulation<SimNode>(nodes)
+      .force("link", forceLink<SimNode, SimLink>(links).id((d) => d.id).distance(40).strength(0.4))
       .force("charge", forceManyBody<SimNode>().strength(-60).distanceMax(400))
       .force("center", forceCenter(0, 0))
       .force("collide", forceCollide<SimNode>().radius((d) => radius(d) + 2));
 
     function draw() {
       if (!ctx) return;
+      const q = queryRef.current;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
       ctx.translate(transform.x, transform.y);
@@ -88,7 +98,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
       const focus = hovered ? neighbours.get(hovered.id) : null;
 
       ctx.lineWidth = 1 / transform.k;
-      for (const l of view.links) {
+      for (const l of links) {
         const s = l.source as SimNode;
         const t = l.target as SimNode;
         const lit = hovered && (s.id === hovered.id || t.id === hovered.id);
@@ -98,7 +108,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         ctx.lineTo(t.x ?? 0, t.y ?? 0);
         ctx.stroke();
       }
-      for (const n of view.nodes) {
+      for (const n of nodes) {
         const dim = (hovered && n.id !== hovered.id && !focus?.has(n.id)) || (q && !n.label.toLowerCase().includes(q));
         ctx.globalAlpha = dim ? 0.2 : 1;
         ctx.fillStyle = KIND_COLOR[n.kind];
@@ -114,7 +124,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
       ctx.font = `${12 / transform.k}px system-ui, sans-serif`;
       ctx.fillStyle = "#e9e9e7";
       ctx.textAlign = "center";
-      for (const n of view.nodes) {
+      for (const n of nodes) {
         const show = n === hovered || focus?.has(n.id) || (q && n.label.toLowerCase().includes(q)) || (!hovered && !q && n.degree >= 6 && transform.k > 0.6);
         if (!show) continue;
         const label = n.label.length > 40 ? `${n.label.slice(0, 39)}…` : n.label;
@@ -122,6 +132,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
       }
     }
     sim.on("tick", draw);
+    redrawRef.current = draw;
 
     const toWorld = (e: PointerEvent | WheelEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -131,7 +142,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
       const p = toWorld(e);
       let best: SimNode | null = null;
       let bestDist = Infinity;
-      for (const n of view.nodes) {
+      for (const n of nodes) {
         const d = Math.hypot((n.x ?? 0) - p.x, (n.y ?? 0) - p.y);
         if (d < radius(n) + 4 / transform.k && d < bestDist) {
           best = n;
@@ -199,6 +210,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointerleave", onUp);
+    canvas.addEventListener("pointercancel", onUp);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     const ro = new ResizeObserver(() => {
       resize();
@@ -209,13 +221,15 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     return () => {
       sim.stop();
       ro.disconnect();
+      redrawRef.current = () => {};
+      canvas.removeEventListener("pointercancel", onUp);
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointerleave", onUp);
       canvas.removeEventListener("wheel", onWheel);
     };
-  }, [view, query, router]);
+  }, [view, router]);
 
   const counts = useMemo(() => {
     const m = new Map<GraphKind, number>();
@@ -255,7 +269,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         </ul>
       </div>
       <div ref={wrapRef} className="relative h-[65vh] min-h-96 overflow-hidden rounded-2xl border border-line bg-bg">
-        <canvas ref={canvasRef} className="touch-none" aria-label={`Knowledge graph with ${view.nodes.length} items and ${view.links.length} connections. A list of the most connected items follows.`} role="img" />
+        <canvas ref={canvasRef} className="touch-none" aria-label={`Knowledge graph with ${view.nodes.length} items and ${view.edges.length} connections. A list of the most connected items follows.`} role="img" />
         {hover ? (
           <div className="pointer-events-none absolute left-3 top-3 max-w-sm rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs shadow-lg">
             <p className="font-medium text-fg">{hover.label}</p>

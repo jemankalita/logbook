@@ -40,20 +40,20 @@ function explain(err: unknown): string {
   return err instanceof Error ? err.message : "Something went wrong.";
 }
 
-export async function scanNotion(): Promise<Result<{ sources: NotionSource[] }>> {
+export async function scanNotion(): Promise<Result<{ sources: NotionSource[]; truncated: boolean }>> {
   await requireSession();
   const cfg = config();
   if (typeof cfg === "string") return { ok: false, error: cfg };
   try {
-    const sources = await discoverSources(createNotionClient(cfg.token), cfg.rootId);
-    return { ok: true, sources };
+    const { sources, truncated } = await discoverSources(createNotionClient(cfg.token), cfg.rootId);
+    return { ok: true, sources, truncated };
   } catch (err) {
     console.error("[notion] scan failed", err);
     return { ok: false, error: explain(err) };
   }
 }
 
-export async function importNotionChunk(rawSource: unknown, rawCursor: unknown): Promise<Result<{ added: number; skipped: number; nextCursor: string | null }>> {
+export async function importNotionChunk(rawSource: unknown, rawCursor: unknown): Promise<Result<{ added: number; skipped: number; failed: number; nextCursor: string | null }>> {
   await requireSession();
   const cfg = config();
   if (typeof cfg === "string") return { ok: false, error: cfg };

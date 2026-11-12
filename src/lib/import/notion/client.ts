@@ -26,8 +26,8 @@ export interface NotionApi {
   databaseTitle(id: string): Promise<string>;
   queryDatabase(id: string, cursor: string | null, pageSize: number): Promise<QueryResult>;
   page(id: string): Promise<NotionPage>;
-  /** All blocks of a page, nested children attached (bounded by `maxRequests`). */
-  blocks(id: string, opts?: { deep?: boolean; maxRequests?: number }): Promise<NotionBlock[]>;
+  /** All blocks of a page, nested children attached (bounded by `maxRequests`; `onTruncated` fires if that cut anything off). */
+  blocks(id: string, opts?: { deep?: boolean; maxRequests?: number; onTruncated?: () => void }): Promise<NotionBlock[]>;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -64,11 +64,19 @@ export function createNotionClient(token: string, fetchImpl: typeof fetch = fetc
     }
   }
 
-  async function children(id: string, budget: { left: number }, deep: boolean): Promise<NotionBlock[]> {
+  interface Budget {
+    left: number;
+    truncated: boolean;
+  }
+
+  async function children(id: string, budget: Budget, deep: boolean): Promise<NotionBlock[]> {
     const out: NotionBlock[] = [];
     let cursor: string | null = null;
     do {
-      if (budget.left-- <= 0) break;
+      if (budget.left-- <= 0) {
+        budget.truncated = true;
+        break;
+      }
       const qs: string = `?page_size=100${cursor ? `&start_cursor=${encodeURIComponent(cursor)}` : ""}`;
       const res: { results: NotionBlock[]; has_more: boolean; next_cursor: string | null } = await call(`/blocks/${id}/children${qs}`);
       out.push(...res.results);
@@ -76,7 +84,12 @@ export function createNotionClient(token: string, fetchImpl: typeof fetch = fetc
     } while (cursor);
     if (deep) {
       for (const b of out) {
-        if (b.has_children && NESTED.has(b.type) && budget.left > 0) b.children = await children(b.id, budget, true);
+        if (!b.has_children || !NESTED.has(b.type)) continue;
+        if (budget.left <= 0) {
+          budget.truncated = true;
+          break;
+        }
+        b.children = await children(b.id, budget, true);
       }
     }
     return out;
@@ -95,6 +108,11 @@ export function createNotionClient(token: string, fetchImpl: typeof fetch = fetc
       return { results: res.results, nextCursor: res.has_more ? res.next_cursor : null };
     },
     page: (id) => call<NotionPage>(`/pages/${id}`),
-    blocks: (id, opts = {}) => children(id, { left: opts.maxRequests ?? 40 }, opts.deep ?? true),
+    async blocks(id, opts = {}) {
+      const budget: Budget = { left: opts.maxRequests ?? 40, truncated: false };
+      const out = await children(id, budget, opts.deep ?? true);
+      if (budget.truncated) opts.onTruncated?.();
+      return out;
+    },
   };
 }

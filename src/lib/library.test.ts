@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { likePattern, parseTags, safeReturnPath } from "./actions";
 import { countBookmarks, isBookmarkExport, parseChromeBookmarks, topLevelNodes, type BookmarkFolder } from "./import/chrome-bookmarks";
-import { isPrivateAddress } from "./net/safe-fetch";
+import { checkedLookup, isPrivateAddress, UnsafeUrlError } from "./net/safe-fetch";
 import { decodeEntities, parseMeta } from "./preview/parse-meta";
 import { buildFolderTree, descendantIds, folderBreadcrumbs, type Folder } from "./queries/library";
 import { docToText, parseDocJson, textToDoc } from "./rich-text";
@@ -83,6 +83,14 @@ describe("isPrivateAddress (SSRF guard)", () => {
   );
   it.each(["8.8.8.8", "1.1.1.1", "172.32.0.1", "142.250.183.14", "2606:4700:4700::1111"])("allows %s", (ip) => expect(isPrivateAddress(ip)).toBe(false));
   it("treats non-IPs as unsafe", () => expect(isPrivateAddress("localhost")).toBe(true));
+  it.each(["::7f00:1", "::127.0.0.1", "::ffff:7f00:1", "64:ff9b::a9fe:a9fe", "2002:7f00:1::", "2002:c0a8:0101::1", "fec0::1", "ff02::1"])(
+    "blocks IPv4-in-IPv6 and reserved form %s",
+    (ip) => expect(isPrivateAddress(ip)).toBe(true),
+  );
+  it.each(["::ffff:8.8.8.8", "2002:808:808::1", "2a00:1450:4001:80b::200e"])("allows public %s", (ip) => expect(isPrivateAddress(ip)).toBe(false));
+  it("refuses at connect time when a hostname resolves to a private address (DNS rebinding)", async () => {
+    await expect(new Promise((resolve, reject) => checkedLookup("localhost", {}, (err, address) => (err ? reject(err) : resolve(address))))).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
 });
 
 const EXPORT = `<!DOCTYPE NETSCAPE-Bookmark-file-1>

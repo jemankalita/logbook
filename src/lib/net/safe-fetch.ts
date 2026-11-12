@@ -1,5 +1,7 @@
+import dns from "node:dns";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Agent, fetch as undiciFetch, type Response as UndiciResponse } from "undici";
 
 /**
  * Fetch a public web page without letting a saved link reach the server's own network
@@ -39,22 +41,68 @@ export function isPrivateAddress(ip: string): boolean {
       return ((n & mask) >>> 0) === ((ipv4ToInt(base) & mask) >>> 0);
     });
   }
-  if (version === 6) {
-    const lower = ip.toLowerCase();
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(lower);
-    if (mapped) return isPrivateAddress(mapped[1]);
-    return (
-      lower === "::" ||
-      lower === "::1" ||
-      lower.startsWith("fc") ||
-      lower.startsWith("fd") ||
-      /^fe[89ab]/.test(lower) ||
-      lower.startsWith("ff") ||
-      lower.startsWith("::ffff:")
-    );
-  }
+  if (version === 6) return isPrivateV6(ip);
   return true;
 }
+
+/** "2002:c0a8::1" → eight 16-bit words (handles "::" and a trailing dotted IPv4). */
+function ipv6Words(ip: string): number[] | null {
+  let s = ip.toLowerCase().split("%")[0];
+  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(s);
+  if (dotted) {
+    const n = ipv4ToInt(dotted[1]);
+    s = `${s.slice(0, -dotted[1].length)}${(n >>> 16).toString(16)}:${(n & 0xffff).toString(16)}`;
+  }
+  const [head, tail] = s.split("::");
+  const h = head ? head.split(":") : [];
+  const t = tail === undefined ? null : tail ? tail.split(":") : [];
+  const parts = t === null ? h : [...h, ...Array<string>(8 - h.length - t.length).fill("0"), ...t];
+  if (parts.length !== 8) return null;
+  const words = parts.map((p) => parseInt(p, 16));
+  return words.every((w) => Number.isInteger(w) && w >= 0 && w <= 0xffff) ? words : null;
+}
+
+const v4FromWords = (a: number, b: number) => `${a >> 8}.${a & 255}.${b >> 8}.${b & 255}`;
+const allZero = (ws: number[]) => ws.every((w) => w === 0);
+
+function isPrivateV6(ip: string): boolean {
+  const w = ipv6Words(ip);
+  if (!w) return true;
+  if (allZero(w.slice(0, 7)) && w[7] <= 1) return true; // :: and ::1
+  // IPv4 hidden inside IPv6: mapped (::ffff:a.b.c.d), compatible (::a.b.c.d), NAT64 (64:ff9b::/96), 6to4 (2002::/16).
+  if (allZero(w.slice(0, 5)) && w[5] === 0xffff) return isPrivateAddress(v4FromWords(w[6], w[7]));
+  if (allZero(w.slice(0, 6))) return isPrivateAddress(v4FromWords(w[6], w[7]));
+  if (w[0] === 0x64 && w[1] === 0xff9b && allZero(w.slice(2, 6))) return isPrivateAddress(v4FromWords(w[6], w[7]));
+  if (w[0] === 0x2002) return isPrivateAddress(v4FromWords(w[1], w[2]));
+  return (
+    (w[0] & 0xfe00) === 0xfc00 || // unique local fc00::/7
+    (w[0] & 0xffc0) === 0xfe80 || // link-local fe80::/10
+    (w[0] & 0xffc0) === 0xfec0 || // old site-local fec0::/10
+    (w[0] & 0xff00) === 0xff00 || // multicast
+    (w[0] === 0x2001 && w[1] === 0x0db8) // documentation
+  );
+}
+
+type LookupCallback = (err: NodeJS.ErrnoException | null, address?: string | dns.LookupAddress[], family?: number) => void;
+
+/**
+ * DNS lookup used for the actual socket connection. Checking the address *here* (not just
+ * before fetch) closes the DNS-rebinding gap: the IP we validate is the IP we connect to.
+ */
+export function checkedLookup(hostname: string, options: dns.LookupOptions, callback: LookupCallback): void {
+  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err);
+    const list = addresses as dns.LookupAddress[];
+    if (list.length === 0 || list.some((a) => isPrivateAddress(a.address))) {
+      return callback(Object.assign(new UnsafeUrlError("That address points to a private network."), { code: "EUNSAFE" }));
+    }
+    if (options.all) return callback(null, list);
+    callback(null, list[0].address, list[0].family);
+  });
+}
+
+let agent: Agent | null = null;
+const guardedAgent = () => (agent ??= new Agent({ connect: { lookup: checkedLookup as never } }));
 
 async function assertPublicUrl(url: URL): Promise<void> {
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new UnsafeUrlError("Only http(s) links can be previewed.");
@@ -67,7 +115,7 @@ async function assertPublicUrl(url: URL): Promise<void> {
   }
 }
 
-async function readCapped(res: Response, maxBytes: number): Promise<string> {
+async function readCapped(res: UndiciResponse, maxBytes: number): Promise<string> {
   if (!res.body) return "";
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -102,10 +150,10 @@ export async function safeFetchText(input: string, maxBytes = 1_500_000): Promis
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     await assertPublicUrl(url);
-    const res = await fetch(url, {
+    const res = await undiciFetch(url, {
       redirect: "manual",
       signal,
-      cache: "no-store",
+      dispatcher: guardedAgent(),
       headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", "accept-language": "en" },
     });
     if (res.status >= 300 && res.status < 400) {

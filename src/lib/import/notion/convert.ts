@@ -6,6 +6,8 @@
 import type { DocNode } from "@/lib/rich-text";
 import { normalizeUrl, detectType, type ItemType } from "@/lib/url";
 import { OPP_TYPES, type OppStatus } from "@/lib/opportunity-meta";
+import { isDay } from "@/lib/dates";
+import { isTime, zonedToUtc } from "@/lib/time";
 
 /* ── Notion API shapes (only the parts we read) ─────────── */
 
@@ -24,7 +26,7 @@ export interface NotionProperty {
   select?: { name: string } | null;
   status?: { name: string } | null;
   multi_select?: { name: string }[];
-  date?: { start: string; end?: string | null } | null;
+  date?: { start: string; end?: string | null; time_zone?: string | null } | null;
   checkbox?: boolean;
   number?: number | null;
 }
@@ -222,7 +224,7 @@ export interface RowValues {
   texts: Record<string, string>;
   urls: Record<string, string>;
   selects: Record<string, string[]>;
-  dates: Record<string, { start: string; end: string | null }>;
+  dates: Record<string, { start: string; end: string | null; timeZone: string | null }>;
   checks: Record<string, boolean>;
   numbers: Record<string, number>;
 }
@@ -257,7 +259,7 @@ export function readRow(page: NotionPage): RowValues {
         if (p.multi_select?.length) row.selects[name] = p.multi_select.map((o) => o.name);
         break;
       case "date":
-        if (p.date?.start) row.dates[name] = { start: p.date.start, end: p.date.end ?? null };
+        if (p.date?.start) row.dates[name] = { start: p.date.start, end: p.date.end ?? null, timeZone: p.date.time_zone ?? null };
         break;
       case "checkbox":
         row.checks[name] = Boolean(p.checkbox);
@@ -294,6 +296,26 @@ export function dayOf(value: string | null | undefined): string | null {
 }
 
 export const isDateTime = (value: string | null | undefined) => Boolean(value && /T\d{2}:\d{2}/.test(value));
+
+/**
+ * A Notion date-time → an instant. Notion sends either an explicit offset ("…+05:30" / "Z") or,
+ * when the property has a time zone set, a floating wall-clock time plus `time_zone`; those are
+ * placed in that zone (falling back to the app's), never in the server's own zone.
+ */
+export function toInstant(value: string, timeZone: string): Date | null {
+  if (/(Z|[+-]\d{2}:?\d{2})$/i.test(value)) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const day = dayOf(value);
+  const time = /T(\d{2}:\d{2})/.exec(value)?.[1];
+  if (!day || !time || !isDay(day) || !isTime(time)) return null;
+  try {
+    return zonedToUtc(day, time, timeZone);
+  } catch {
+    return null;
+  }
+}
 
 /* ── Option names → Logbook enums ───────────────────────── */
 

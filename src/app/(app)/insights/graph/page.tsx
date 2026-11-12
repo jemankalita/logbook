@@ -29,6 +29,13 @@ export default async function GraphPage({ searchParams }: { searchParams: Promis
             Show all {graph.hiddenLinks + MAX_LINK_NODES}
           </Link>
         </p>
+      ) : all ? (
+        <p className="text-xs text-muted">
+          Showing every link.{" "}
+          <Link href="/insights/graph" className="text-accent hover:underline">
+            Show fewer (faster)
+          </Link>
+        </p>
       ) : null}
       {graph.nodes.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Nothing to connect yet. Save links into folders, tag them, write notes — the graph grows as you do.</div>

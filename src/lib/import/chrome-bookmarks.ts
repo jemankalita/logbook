@@ -34,7 +34,9 @@ export type BookmarkNode = BookmarkLink | BookmarkFolder;
 export const CHROME_ROOT_FOLDERS = new Set(["bookmarks bar", "bookmarks", "other bookmarks", "mobile bookmarks", "favorites bar", "favourites bar"]);
 
 const MAX_ICON_CHARS = 6_000;
-const TOKEN_RE = /<DT>\s*<H3\b([^>]*)>([\s\S]*?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]*?)<\/A>|<DL\b[^>]*>|<\/DL>/gi;
+// Titles are bounded so a malformed file (an unclosed <A> repeated many times) can't make
+// each match scan to the end of a 20 MB input — that would be quadratic.
+const TOKEN_RE = /<DT>\s*<H3\b([^>]*)>([\s\S]{0,2000}?)<\/H3>|<DT>\s*<A\b([^>]*)>([\s\S]{0,2000}?)<\/A>|<DL\b[^>]*>|<\/DL>/gi;
 
 function attr(attrs: string, name: string): string | undefined {
   const m = new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, "i").exec(attrs);
