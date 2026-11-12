@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Save to Logbook — settings</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 1.25rem; min-width: 22rem; background: #191919; color: #e9e9e7; font: 14px/1.5 system-ui, sans-serif; }
+      h1 { font-size: 1rem; margin: 0 0 .75rem; }
+      label { display: block; font-size: .8rem; color: #9b9a97; margin-bottom: .35rem; }
+      input { box-sizing: border-box; width: 100%; height: 2.25rem; padding: 0 .6rem; border-radius: .5rem; border: 1px solid #2f2f2f; background: #262626; color: inherit; font: inherit; }
+      input:focus { outline: none; border-color: #4f8cff; }
+      .row { display: flex; align-items: center; gap: .75rem; margin-top: .75rem; }
+      button { height: 2.25rem; padding: 0 1rem; border: 0; border-radius: .5rem; background: #4f8cff; color: #fff; font: inherit; cursor: pointer; }
+      #status { font-size: .8rem; color: #9b9a97; }
+      #status.error { color: #ff6b6b; }
+      p { color: #9b9a97; font-size: .8rem; margin: 1rem 0 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Save to Logbook</h1>
+    <form id="form">
+      <label for="url">Your Logbook address</label>
+      <input id="url" type="url" required placeholder="https://your-logbook.vercel.app" autocomplete="url" />
+      <div class="row">
+        <button type="submit">Save</button>
+        <span id="status" role="status"></span>
+      </div>
+    </form>
+    <p>Right-click any page, link or selected text → “Save to Logbook”, click the toolbar icon, or press Alt+Shift+S. Make sure you're signed in to Logbook in this browser.</p>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -20,5 +20,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt).*)"],
+  // Public: build assets, and what the browser needs to install the app (manifest, icons, service worker).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|sw.js|offline.html|pwa-icon/).*)"],
 };

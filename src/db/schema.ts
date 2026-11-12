@@ -242,3 +242,19 @@ export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
 });
+
+/**
+ * What each one-time importer has already brought in (e.g. a Notion page id → the row it became),
+ * so re-running an import skips what's done instead of duplicating it.
+ */
+export const importMap = pgTable(
+  "import_map",
+  {
+    source: text("source").notNull(),
+    externalId: text("external_id").notNull(),
+    entity: text("entity").notNull(),
+    entityId: text("entity_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.source, t.externalId] })],
+);
