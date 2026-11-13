@@ -2,102 +2,100 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Search, ShieldOff } from "lucide-react";
+import { motion } from "motion/react";
+import { Lock, Search, ShieldOff } from "lucide-react";
 import { logout, signOutEverywhere } from "@/app/(app)/actions";
+import { springs } from "@/lib/motion-tokens";
+import { Wordmark } from "./brand";
+import { cls } from "./cls";
 import { OPEN_PALETTE_EVENT } from "./command-palette";
-import { NAV_ITEMS, type NavItem } from "./nav-items";
+import { isActivePath, NAV_GROUPS, type NavItem } from "./nav-items";
 
-function NavLink({ item, active, compact }: { item: NavItem; active: boolean; compact?: boolean }) {
+export const SIGN_OUT_EVERYWHERE_MESSAGE = "Sign out on every device (phone, laptop, extension)? You'll need your password again here too.";
+
+export function openPalette() {
+  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+}
+
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
-  const base = compact
-    ? "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm"
-    : "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm";
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`${base} transition-colors ${active ? "bg-panel-2 text-fg" : "text-muted hover:bg-panel-2/60 hover:text-fg"}`}
+      className={`group relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-colors duration-150 ${active ? "font-medium text-fg" : "text-muted hover:text-fg"}`}
     >
-      <Icon className="size-4" aria-hidden />
-      <span>{item.label}</span>
+      {active ? (
+        <motion.span layoutId="sidebar-active" transition={springs.snappy} className="absolute inset-0 rounded-lg border border-line bg-panel-2 shadow-card" />
+      ) : (
+        <span className="absolute inset-0 rounded-lg bg-panel-2/0 transition-colors duration-150 group-hover:bg-panel-2/50" />
+      )}
+      <Icon className={`relative size-4 shrink-0 transition-colors duration-150 ${active ? "text-accent" : "text-faint group-hover:text-muted"}`} aria-hidden />
+      <span className="relative truncate">{item.label}</span>
     </Link>
   );
 }
 
-function openPalette() {
-  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
-}
+const footerBtn = "flex h-8 items-center gap-2 rounded-lg px-2.5 text-[13px] text-muted transition-colors duration-150 hover:bg-panel-2/50 hover:text-fg";
 
-const footerBtn = "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-panel-2/60 hover:text-fg";
-
+/** Desktop navigation rail. Phones get <MobileNav /> instead. */
 export function Sidebar() {
   const pathname = usePathname();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
   return (
-    <>
-      {/* Desktop */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-panel px-3 py-4 md:flex">
-        <div className="mb-4 flex items-center gap-2 px-2.5">
-          <span aria-hidden className="text-lg">
-            📓
-          </span>
-          <span className="font-semibold">Logbook</span>
-        </div>
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-sidebar md:flex">
+      <div className="px-4 pb-3 pt-4">
+        <Link href="/" className="inline-flex rounded-lg" aria-label="Logbook home">
+          <Wordmark />
+        </Link>
+      </div>
+
+      <div className="px-3 pb-2">
         <button
           type="button"
           onClick={openPalette}
-          className="mb-4 flex h-9 items-center gap-2 rounded-lg border border-line bg-panel-2 px-2.5 text-sm text-muted transition hover:text-fg"
+          className="flex h-9 w-full items-center gap-2 rounded-lg border border-line bg-panel px-2.5 text-[13px] text-muted shadow-card transition-[border-color,color] duration-150 hover:border-line-strong hover:text-fg"
         >
-          <Search className="size-4" aria-hidden />
+          <Search className="size-4 text-faint" aria-hidden />
           <span className="flex-1 text-left">Search or capture</span>
-          <kbd className="rounded border border-line px-1 text-[10px]">Ctrl K</kbd>
+          <span className="flex gap-0.5" aria-hidden>
+            <kbd className={cls.kbd}>Ctrl</kbd>
+            <kbd className={cls.kbd}>K</kbd>
+          </span>
         </button>
-        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Main">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(item.href)} />
-          ))}
-        </nav>
-        <form action={logout}>
-          <button type="submit" className={footerBtn}>
-            <LogOut className="size-4" aria-hidden />
+      </div>
+
+      <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-2" aria-label="Main">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className={`${cls.eyebrow} mb-1.5 px-2.5`}>{group.label}</p>
+            <div className="flex flex-col gap-px">
+              {group.items.map((item) => (
+                <NavLink key={item.href} item={item} active={isActivePath(pathname, item.href)} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      <div className="flex items-center justify-between gap-1 border-t border-line p-3">
+        <form action={logout} className="min-w-0 flex-1">
+          <button type="submit" className={`${footerBtn} w-full`}>
+            <Lock className="size-4 text-faint" aria-hidden />
             Lock this device
           </button>
         </form>
         <form
           action={signOutEverywhere}
           onSubmit={(e) => {
-            if (!window.confirm("Sign out on every device (phone, laptop, extension)? You'll need your password again here too.")) e.preventDefault();
+            if (!window.confirm(SIGN_OUT_EVERYWHERE_MESSAGE)) e.preventDefault();
           }}
         >
-          <button type="submit" className={footerBtn}>
-            <ShieldOff className="size-4" aria-hidden />
-            Sign out everywhere
+          <button type="submit" className={`${footerBtn} w-8 justify-center px-0`} aria-label="Sign out everywhere" title="Sign out everywhere">
+            <ShieldOff className="size-4 text-faint" aria-hidden />
           </button>
         </form>
-      </aside>
-
-      {/* Mobile */}
-      <header className="sticky top-0 z-10 border-b border-line bg-panel/95 backdrop-blur md:hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="font-semibold">📓 Logbook</span>
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={openPalette} className="text-muted" aria-label="Search or capture">
-              <Search className="size-5" aria-hidden />
-            </button>
-            <form action={logout}>
-              <button type="submit" className="text-muted" aria-label="Lock">
-                <LogOut className="size-5" aria-hidden />
-              </button>
-            </form>
-          </div>
-        </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-2" aria-label="Main">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(item.href)} compact />
-          ))}
-        </nav>
-      </header>
-    </>
+      </div>
+    </aside>
   );
 }

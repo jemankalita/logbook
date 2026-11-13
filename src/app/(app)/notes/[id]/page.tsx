@@ -32,7 +32,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
   const edited = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(note.updatedAt);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="rise mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href="/notes" className={cls.btnGhost}>
           <ArrowLeft className="size-4" aria-hidden /> Notes

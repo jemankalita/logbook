@@ -13,7 +13,7 @@ export interface TaskFormOptions {
   areas: string[];
 }
 
-const PRIORITY_DOT: Record<string, string> = { high: "bg-danger", medium: "bg-yellow-400", low: "bg-accent" };
+const PRIORITY_DOT: Record<string, string> = { high: "bg-danger", medium: "bg-warn", low: "bg-accent" };
 const STATUS_LABEL: Record<Task["status"], string> = { not_started: "Not started", in_progress: "In progress", done: "Done" };
 
 function Checkbox({ checked, label, onToggle }: { checked: boolean; label: string; onToggle: () => void }) {
@@ -24,7 +24,7 @@ function Checkbox({ checked, label, onToggle }: { checked: boolean; label: strin
       aria-checked={checked}
       aria-label={label}
       onClick={onToggle}
-      className={`grid size-5 shrink-0 place-items-center rounded-md border transition ${checked ? "border-success bg-success text-black" : "border-muted/60 hover:border-fg"}`}
+      className={`grid size-5 shrink-0 place-items-center rounded-md border transition ${checked ? "border-success bg-success text-bg" : "border-muted/60 hover:border-fg"}`}
     >
       {checked ? <Check className="size-3.5" aria-hidden /> : null}
     </button>
@@ -148,7 +148,7 @@ export function HabitRow({ habit, options }: { habit: Habit; options: TaskFormOp
           />
         ))}
       </div>
-      <span className={`tabular flex w-12 items-center justify-end gap-1 text-xs ${streak > 0 ? "text-orange-400" : "text-muted"}`} title="Current streak">
+      <span className={`tabular flex w-12 items-center justify-end gap-1 text-xs ${streak > 0 ? "text-warn" : "text-muted"}`} title="Current streak">
         <Flame className="size-3.5" aria-hidden /> {streak}
       </span>
       <button type="button" aria-label="Edit habit" onClick={() => setEditing(true)} className={`${cls.btnGhost} md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100`}>

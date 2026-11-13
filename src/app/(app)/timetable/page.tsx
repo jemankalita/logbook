@@ -51,12 +51,13 @@ export default async function TimetablePage({ searchParams }: { searchParams: Pr
   const defaultDay = days.includes(today) ? today : monday;
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="rise mx-auto flex max-w-7xl flex-col gap-5">
+      <header className="rise flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
+          <p className={`${cls.eyebrow} mb-2`}>Week of {formatDay(monday, { month: "long", day: "numeric", year: "numeric" })}</p>
           <h1 className={cls.h1}>Time Table</h1>
-          <p className="mt-1 text-sm text-muted">
-            Week of {formatDay(monday, { month: "long", day: "numeric", year: "numeric" })} · {formatDuration(totalDone)} done of {formatDuration(totalPlanned)} planned
+          <p className="tabular mt-2 text-sm text-muted">
+            <span className="text-fg">{formatDuration(totalDone)}</span> done of {formatDuration(totalPlanned)} planned
           </p>
         </div>
         <nav className="flex flex-wrap items-center gap-2" aria-label="Weeks">

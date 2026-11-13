@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { CalendarCheck, Flame, Sparkles, Trophy } from "lucide-react";
 import { CalendarSetup, EventRow, SyncedLabel } from "@/components/calendar-ui";
 import { CheckInCard } from "@/components/check-in-card";
+import { cls } from "@/components/cls";
+import { DeadlinesCard, TodayCard } from "@/components/dashboard-cards";
 import { Heatmap } from "@/components/heatmap";
-import { StatTile } from "@/components/stat-tile";
+import { ItemCard } from "@/components/library/item-card";
+import { CardHeader, PageHeader } from "@/components/page-ui";
+import { Segmented } from "@/components/segmented";
+import { Stat } from "@/components/stat-tile";
 import { buildAgenda } from "@/lib/calendar/agenda";
 import { getCalendarSnapshot, type SnapshotResult } from "@/lib/calendar/feeds";
 import { appTimezone, formatDay, today, type Day } from "@/lib/dates";
@@ -10,12 +16,11 @@ import { buildHeatmap, computeStreaks, HEATMAP_MODES, parseMode, type ActivityIn
 import { getActivity, getAttendanceFor } from "@/lib/queries/activity";
 import { recentLinks } from "@/lib/queries/library";
 import { getHabits, getTodayTasks } from "@/lib/queries/tasks";
-import { ItemCard } from "@/components/library/item-card";
-import { DeadlinesCard, TodayCard } from "@/components/dashboard-cards";
 
 export const dynamic = "force-dynamic";
 
 const HEATMAP_WEEKS = 53;
+const RECENT_LINKS = 3;
 
 const MODE_LABELS: Record<HeatmapMode, string> = {
   attendance: "Attendance",
@@ -43,25 +48,20 @@ function plural(n: number, word: string): string {
 }
 
 function TodaySchedule({ result, todayDay, timeZone, now }: { result: SnapshotResult; todayDay: Day; timeZone: string; now: Date }) {
-  if (result.state === "unconfigured") return <CalendarSetup />;
+  if (result.state === "unconfigured") return <CalendarSetup compact />;
 
   const [day] = result.state === "ok" ? buildAgenda(result.snapshot.events, todayDay, 1, timeZone) : [];
   const events = day ? [...day.allDay, ...day.timed] : [];
 
   return (
-    <section className="flex flex-col rounded-2xl border border-line bg-panel p-5">
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted">Today&apos;s schedule</h2>
-        <Link href="/calendar" className="text-xs text-muted transition-colors hover:text-fg">
-          Next 14 days →
-        </Link>
-      </div>
+    <section className={`${cls.card} flex flex-col p-5`}>
+      <CardHeader title="Schedule" count={events.length || undefined} href="/calendar" linkLabel="Next 14 days" />
       {result.state === "error" ? (
         <p role="alert" className="text-sm text-danger">
           Couldn&apos;t reach Google Calendar: {result.error}
         </p>
       ) : events.length === 0 ? (
-        <p className="py-2 text-sm text-muted">Nothing on the calendar today.</p>
+        <p className="py-1 text-sm text-muted">Nothing on the calendar today.</p>
       ) : (
         <ul className="-mx-2 max-h-64 overflow-y-auto">
           {events.map((e) => (
@@ -70,7 +70,7 @@ function TodaySchedule({ result, todayDay, timeZone, now }: { result: SnapshotRe
         </ul>
       )}
       {result.state === "ok" ? (
-        <p className="mt-auto pt-2 text-xs text-muted">
+        <p className="mt-auto pt-3 text-xs text-faint">
           <SyncedLabel fetchedAt={result.snapshot.fetchedAt} now={now} />
         </p>
       ) : null}
@@ -88,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getActivity(), // full history so streaks aren't capped at a year
     getAttendanceFor(todayDay),
     getCalendarSnapshot(todayDay),
-    recentLinks(4),
+    recentLinks(RECENT_LINKS),
     getTodayTasks(todayDay),
     getHabits(todayDay),
   ]);
@@ -96,6 +96,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const heatmap = buildHeatmap(todayDay, mode, activity, HEATMAP_WEEKS);
   const days = activeDays(mode, activity);
   const streaks = computeStreaks(days, todayDay);
+  const attendanceStreak = mode === "attendance" ? streaks.current : computeStreaks([...activity.attendedDays], todayDay).current;
   const thisMonth = days.filter((d) => d.startsWith(todayDay.slice(0, 7))).length;
 
   const checkedInLabel = todayAttendance
@@ -103,72 +104,72 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     : null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
-      <header>
-        <p className="text-sm text-muted">{formatDay(todayDay, { weekday: "long", month: "long", day: "numeric" })}</p>
-        <h1 className="mt-1 text-2xl font-semibold md:text-3xl">{greeting(timeZone)}, Jeman</h1>
-      </header>
+    <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <PageHeader
+        eyebrow={formatDay(todayDay, { weekday: "long", month: "long", day: "numeric" })}
+        title={
+          <>
+            {greeting(timeZone)}, <em className="text-muted">Jeman</em>
+          </>
+        }
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <CheckInCard checkedInLabel={checkedInLabel} />
+      <div className="rise grid gap-4 lg:grid-cols-3" style={{ "--i": 1 } as React.CSSProperties}>
+        <CheckInCard checkedInLabel={checkedInLabel} streak={attendanceStreak} />
+        <TodayCard todayDay={todayDay} tasks={todayTasks} habits={habits.scheduled} />
         <TodaySchedule result={calendar} todayDay={todayDay} timeZone={timeZone} now={now} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TodayCard todayDay={todayDay} tasks={todayTasks} habits={habits.scheduled} />
-        <DeadlinesCard todayDay={todayDay} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatTile label="Current streak" value={plural(streaks.current, "day")} />
-        <StatTile label="Longest streak" value={plural(streaks.longest, "day")} hint="all time" />
-        <StatTile label="Active days" value={streaks.total} hint="all time" />
-        <StatTile label="This month" value={thisMonth} hint={formatDay(todayDay, { month: "long" })} />
-      </div>
-
-      <section className="rounded-2xl border border-line bg-panel p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-medium">Your year</h2>
-          <nav className="flex rounded-lg border border-line bg-panel-2 p-0.5 text-sm" aria-label="Heatmap mode">
-            {HEATMAP_MODES.map((m) => (
-              <Link
-                key={m}
-                href={m === "attendance" ? "/" : `/?mode=${m}`}
-                aria-current={m === mode ? "page" : undefined}
-                scroll={false}
-                className={`rounded-md px-3 py-1 transition-colors ${m === mode ? "bg-panel text-fg shadow" : "text-muted hover:text-fg"}`}
-              >
-                {MODE_LABELS[m]}
-              </Link>
-            ))}
-          </nav>
+      <section className={`${cls.card} rise overflow-hidden`} style={{ "--i": 2 } as React.CSSProperties}>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">
+          <div>
+            <h2 className="font-display text-2xl leading-none">Your year</h2>
+            <p className="mt-1.5 text-xs text-faint">Every square is a day. Green means you showed up.</p>
+          </div>
+          <Segmented label="Heatmap mode" items={HEATMAP_MODES.map((m) => ({ href: m === "attendance" ? "/" : `/?mode=${m}`, label: MODE_LABELS[m], active: m === mode }))} />
         </div>
-        <Heatmap
-          data={heatmap}
-          mode={mode}
-          today={todayDay}
-          summary={`${plural(streaks.total, "active day")} in total, current streak ${plural(streaks.current, "day")}, ${thisMonth} this month.`}
-        />
-        {mode !== "attendance" && activity.tasksByDay.size === 0 ? (
-          <p className="mt-3 text-xs text-muted">Tick off tasks and habits on the Tasks page and they&apos;ll show up here.</p>
-        ) : null}
+
+        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-line bg-panel-2/30 px-5 py-4 md:grid-cols-4">
+          <Stat label="Current streak" value={streaks.current} unit={streaks.current === 1 ? "day" : "days"} icon={Flame} tone={streaks.current > 0 ? "warn" : "default"} />
+          <Stat label="Longest streak" value={streaks.longest} unit={streaks.longest === 1 ? "day" : "days"} icon={Trophy} />
+          <Stat label="Active days" value={streaks.total} unit="all time" icon={CalendarCheck} />
+          <Stat label={formatDay(todayDay, { month: "long" })} value={thisMonth} unit={thisMonth === 1 ? "day" : "days"} icon={Sparkles} />
+        </div>
+
+        <div className="p-5">
+          <Heatmap
+            data={heatmap}
+            mode={mode}
+            today={todayDay}
+            summary={`${plural(streaks.total, "active day")} in total, current streak ${plural(streaks.current, "day")}, ${thisMonth} this month.`}
+          />
+          {mode !== "attendance" && activity.tasksByDay.size === 0 ? (
+            <p className="mt-3 text-xs text-faint">Tick off tasks and habits on the Tasks page and they&apos;ll show up here.</p>
+          ) : null}
+        </div>
       </section>
 
-      {recent.length ? (
-        <section>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="font-medium">Recently saved</h2>
-            <Link href="/library" className="text-xs text-muted hover:text-fg">
-              Library →
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {recent.map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
-          </div>
+      <div className="rise grid gap-4 lg:grid-cols-3" style={{ "--i": 3 } as React.CSSProperties}>
+        <DeadlinesCard todayDay={todayDay} />
+        <section className="lg:col-span-2">
+          <CardHeader title="Recently saved" href="/library" linkLabel="Library" />
+          {recent.length ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {recent.map((item) => (
+                <ItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div className={`${cls.empty} py-10`}>
+              Nothing saved yet. Paste a link with <kbd className={cls.kbd}>Ctrl</kbd> <kbd className={cls.kbd}>K</kbd>, or{" "}
+              <Link href="/library/import" className="text-fg underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-fg">
+                import your bookmarks
+              </Link>
+              .
+            </div>
+          )}
         </section>
-      ) : null}
+      </div>
     </div>
   );
 }

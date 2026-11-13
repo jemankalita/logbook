@@ -35,11 +35,11 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
   const next = addDays(day, 1);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_260px]">
+    <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_280px]">
       <div className="flex min-w-0 flex-col gap-4">
-        <header className="flex flex-wrap items-center justify-between gap-3">
+        <header className="rise flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div>
-            <p className="text-sm text-muted">{day === today ? "Today" : `${diffDays(today, day)} days ago`}</p>
+            <p className={`${cls.eyebrow} mb-2`}>{day === today ? "Today" : diffDays(today, day) === 1 ? "Yesterday" : `${diffDays(today, day)} days ago`}</p>
             <h1 className={cls.h1}>{formatDay(day, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</h1>
           </div>
           <nav className="flex gap-1" aria-label="Days">

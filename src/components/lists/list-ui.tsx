@@ -4,15 +4,9 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { ExternalLink, Pencil, Star, Trash2 } from "lucide-react";
 import { createList, deleteEntry, saveEntry, setEntryStatus, updateList } from "@/app/(app)/lists/actions";
 import { cls, FormMessage, SubmitButton } from "@/components/ui";
+import { KIND_COPY, type EntryStatus, type ListKind } from "./kind-copy";
 
-export type ListKind = "watchlist" | "people" | "generic";
-export type EntryStatus = "todo" | "doing" | "done";
-
-export const KIND_COPY: Record<ListKind, { status: Record<EntryStatus, string>; subtitle: string; title: string; emoji: string }> = {
-  watchlist: { status: { todo: "To watch", doing: "Watching", done: "Watched" }, subtitle: "Movie, series, anime, book…", title: "Title", emoji: "🎬" },
-  people: { status: { todo: "Reach out", doing: "In touch", done: "Connected" }, subtitle: "Who they are — role, where you met", title: "Name", emoji: "🧑‍🤝‍🧑" },
-  generic: { status: { todo: "To do", doing: "Doing", done: "Done" }, subtitle: "Detail", title: "Title", emoji: "📋" },
-};
+export type { EntryStatus, ListKind };
 
 export interface Entry {
   id: string;
@@ -83,7 +77,7 @@ function RatingInput({ name, defaultValue }: { name: string; defaultValue: numbe
       <input type="hidden" name={name} value={value || ""} />
       {[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} star${n > 1 ? "s" : ""}`} onClick={() => setValue(value === n ? 0 : n)} className="p-0.5">
-          <Star className={`size-4 ${n <= value ? "fill-yellow-400 text-yellow-400" : "text-muted"}`} aria-hidden />
+          <Star className={`size-4 ${n <= value ? "fill-warn text-warn" : "text-muted"}`} aria-hidden />
         </button>
       ))}
     </div>
@@ -167,7 +161,7 @@ export function EntryRow({ entry, listId, kind }: { entry: Entry; listId: string
       <div className="min-w-0 flex-1">
         <p className={`break-words text-sm font-medium ${entry.status === "done" && kind !== "people" ? "text-muted" : ""}`}>
           {entry.title}
-          {entry.rating ? <span className="ml-2 text-xs text-yellow-400">{"★".repeat(entry.rating)}</span> : null}
+          {entry.rating ? <span className="ml-2 text-xs text-warn">{"★".repeat(entry.rating)}</span> : null}
         </p>
         {entry.subtitle ? <p className="text-xs text-muted">{entry.subtitle}</p> : null}
         {entry.notes ? <p className="mt-0.5 text-xs text-fg/80">{entry.notes}</p> : null}

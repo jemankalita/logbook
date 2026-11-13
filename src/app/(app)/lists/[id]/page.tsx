@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { getDb } from "@/db/client";
 import { listEntries, lists } from "@/db/schema";
 import { cls } from "@/components/cls";
-import { EditListForm, EntryForm, EntryRow, KIND_COPY, type EntryStatus } from "@/components/lists/list-ui";
+import { KIND_COPY, type EntryStatus } from "@/components/lists/kind-copy";
+import { EditListForm, EntryForm, EntryRow } from "@/components/lists/list-ui";
 import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
 import { deleteList } from "../actions";
+import { BackLink, PageHeader } from "@/components/page-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -39,19 +41,22 @@ export default async function ListPage({ params, searchParams }: { params: Promi
   const copy = KIND_COPY[list.kind];
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <Link href="/lists" className={`${cls.btnGhost} self-start`}>
-        <ArrowLeft className="size-4" aria-hidden /> Lists
-      </Link>
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className={cls.h1}>
-          {list.emoji ?? copy.emoji} {list.name}
-        </h1>
-        <span className="tabular text-sm text-muted">{entries.length}</span>
-        <Link href={editing ? `/lists/${list.id}` : `/lists/${list.id}?edit=1`} className={cls.btnGhost}>
-          {editing ? "Close" : "Edit list"}
-        </Link>
-      </header>
+    <div className="rise mx-auto flex max-w-4xl flex-col gap-5">
+      <BackLink href="/lists">Lists</BackLink>
+      <PageHeader
+        title={
+          <>
+            <span aria-hidden className="mr-2">{list.emoji ?? copy.emoji}</span>
+            {list.name}
+          </>
+        }
+        meta={`${entries.length} ${entries.length === 1 ? "entry" : "entries"}`}
+        actions={
+          <Link href={editing ? `/lists/${list.id}` : `/lists/${list.id}?edit=1`} className={cls.btnGhost}>
+            <Pencil className="size-4" aria-hidden /> {editing ? "Close" : "Edit list"}
+          </Link>
+        }
+      />
 
       {editing ? (
         <section className={`${cls.card} flex flex-col gap-4 p-4`}>

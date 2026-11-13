@@ -102,7 +102,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         const s = l.source as SimNode;
         const t = l.target as SimNode;
         const lit = hovered && (s.id === hovered.id || t.id === hovered.id);
-        ctx.strokeStyle = lit ? "rgba(233,233,231,0.6)" : "rgba(155,154,151,0.18)";
+        ctx.strokeStyle = lit ? "rgba(236,237,238,0.6)" : "rgba(154,157,166,0.16)";
         ctx.beginPath();
         ctx.moveTo(s.x ?? 0, s.y ?? 0);
         ctx.lineTo(t.x ?? 0, t.y ?? 0);
@@ -116,13 +116,13 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         ctx.arc(n.x ?? 0, n.y ?? 0, radius(n), 0, Math.PI * 2);
         ctx.fill();
         ctx.lineWidth = 2 / transform.k;
-        ctx.strokeStyle = "#191919";
+        ctx.strokeStyle = "#0b0c0e";
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
       // Labels: big nodes always, the hovered node and its neighbours, and search matches.
       ctx.font = `${12 / transform.k}px system-ui, sans-serif`;
-      ctx.fillStyle = "#e9e9e7";
+      ctx.fillStyle = "#ecedee";
       ctx.textAlign = "center";
       for (const n of nodes) {
         const show = n === hovered || focus?.has(n.id) || (q && n.label.toLowerCase().includes(q)) || (!hovered && !q && n.degree >= 6 && transform.k > 0.6);
@@ -268,7 +268,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
           ))}
         </ul>
       </div>
-      <div ref={wrapRef} className="relative h-[65vh] min-h-96 overflow-hidden rounded-2xl border border-line bg-bg">
+      <div ref={wrapRef} className="relative h-[65vh] min-h-96 overflow-hidden rounded-xl border border-line bg-bg">
         <canvas ref={canvasRef} className="touch-none" aria-label={`Knowledge graph with ${view.nodes.length} items and ${view.edges.length} connections. A list of the most connected items follows.`} role="img" />
         {hover ? (
           <div className="pointer-events-none absolute left-3 top-3 max-w-sm rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs shadow-lg">

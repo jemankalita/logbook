@@ -67,7 +67,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const saved = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(item.createdAt);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="rise mx-auto flex max-w-5xl flex-col gap-6">
       <Link href={backHref} className={`${cls.btnGhost} self-start`}>
         <ArrowLeft className="size-4" aria-hidden /> {crumbs.length ? crumbs.map((c) => c.name).join(" / ") : "Library"}
       </Link>

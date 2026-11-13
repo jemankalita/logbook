@@ -5,6 +5,7 @@ import { CategoryBars, MoodLine, WeeklyBars } from "@/components/insights/charts
 import { StatTile } from "@/components/stat-tile";
 import { today as getToday } from "@/lib/dates";
 import { getInsights, INSIGHT_WEEKS } from "@/lib/queries/insights";
+import { PageHeader } from "@/components/page-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Insights · Logbook" };
@@ -14,16 +15,17 @@ export default async function InsightsPage() {
   const t = data.totals;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className={cls.h1}>Insights</h1>
-          <p className="mt-1 text-sm text-muted">The last {INSIGHT_WEEKS} weeks at a glance.</p>
-        </div>
-        <Link href="/insights/graph" className={cls.btnPrimary}>
-          <Network className="size-4" aria-hidden /> Knowledge graph
-        </Link>
-      </header>
+    <div className="rise mx-auto flex max-w-6xl flex-col gap-5">
+      <PageHeader
+        eyebrow="Goals"
+        title="Insights"
+        description={`The last ${INSIGHT_WEEKS} weeks at a glance — what you did, how you felt, where your attention went.`}
+        actions={
+          <Link href="/insights/graph" className={cls.btn}>
+            <Network className="size-4" aria-hidden /> Knowledge graph
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <StatTile label="Tasks done" value={t.tasksDone30} hint="last 30 days" />

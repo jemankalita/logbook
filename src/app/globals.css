@@ -1,51 +1,203 @@
 @import "tailwindcss";
 
-/* Dark, Notion-like palette (matches your Notion + Chrome bookmark look). */
+/*
+ * Logbook design tokens — "ink on graphite".
+ * Cool-neutral near-black canvas, hairline borders, one periwinkle accent, green reserved
+ * for "done / present", amber for streaks and urgency. Depth comes from surface steps;
+ * shadows are only for things that float (menus, dialogs).
+ */
 :root {
-  --bg: #191919;
-  --panel: #202020;
-  --panel-2: #262626;
-  --line: #2f2f2f;
-  --fg: #e9e9e7;
-  --muted: #9b9a97;
-  --accent: #4f8cff;
-  --accent-ink: #ffffff;
-  --success: #39d353;
-  --danger: #ff6b6b;
+  /* Surfaces, darkest → lightest */
+  --bg: #0b0c0e;
+  --sidebar: #0e0f12;
+  --panel: #131418;
+  --panel-2: #1a1c21;
+  --panel-3: #23262d;
+  --line: #24262c;
+  --line-strong: #353942;
 
-  /* GitHub-style contribution scale */
-  --heat-0: #262626;
-  --heat-1: #0e4429;
-  --heat-2: #006d32;
-  --heat-3: #26a641;
-  --heat-4: #39d353;
+  /* Ink */
+  --fg: #ecedee;
+  --muted: #9a9da6;
+  --faint: #6c7079;
+
+  /* Signal colours */
+  --accent: #8098ff;
+  --accent-ink: #0b0c0e;
+  --success: #3ecf8e;
+  --warn: #f0a63a;
+  --danger: #f2616d;
+
+  /* Contribution scale (steps of the success green) */
+  --heat-0: #1a1c21;
+  --heat-1: #133a2c;
+  --heat-2: #1b6046;
+  --heat-3: #28976b;
+  --heat-4: #3ecf8e;
+
+  /* Motion — one easing and duration set for the whole app */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur: 220ms;
 
   color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
   --color-panel: var(--panel);
   --color-panel-2: var(--panel-2);
+  --color-panel-3: var(--panel-3);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-success: var(--success);
+  --color-warn: var(--warn);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-display-serif), ui-serif, Georgia, serif;
+
+  /* Cards sit flat with a faint top highlight; only floating layers cast a shadow. */
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  --shadow-raised: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.5), 0 24px 64px -12px rgb(0 0 0 / 0.6);
+
+  --animate-rise: rise 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 160ms ease-out both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scrollbar-color: var(--panel-3) transparent;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: -0.006em;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  color: var(--fg);
+}
+
+/* One focus treatment everywhere: a crisp accent ring that follows the element's shape. */
+:where(a, button, summary, [role="option"], [role="checkbox"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:where(input, textarea, select):focus-visible {
+  outline: none;
+}
+
+/* Thin, quiet scrollbars (standard properties for Chrome/Firefox; webkit pseudo-elements for Safari) */
+* {
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--panel-3);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--line-strong);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p,
+li,
+figcaption {
+  text-wrap: pretty;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Staggered entrance for page sections: style="--i:2" delays the third block. */
+.rise {
+  animation: var(--animate-rise);
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* Native <details> used as a disclosure: no default marker. */
+summary {
+  list-style: none;
+  cursor: pointer;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Remote preview images: a neutral inner edge so they don't bleed into the card. */
+.img-edge {
+  outline: 1px solid rgb(255 255 255 / 0.08);
+  outline-offset: -1px;
+}
+
+/* Native form bits */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9da6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  appearance: none;
+  padding-right: 1.9rem !important;
+}
+
+kbd {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -54,32 +206,45 @@ body {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
   }
 }
 
 /* ── Rich-text editor (Notes, Journal, Paths) ───────────── */
 .prose-doc {
-  font-size: 0.975rem;
-  line-height: 1.7;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: color-mix(in oklab, var(--fg) 92%, transparent);
+}
+.prose-doc:focus {
+  outline: none;
 }
 .prose-doc > * + * {
-  margin-top: 0.5em;
+  margin-top: 0.6em;
+}
+.prose-doc h1,
+.prose-doc h2,
+.prose-doc h3 {
+  color: var(--fg);
+  letter-spacing: -0.015em;
 }
 .prose-doc h1 {
-  font-size: 1.6rem;
-  font-weight: 650;
-  line-height: 1.25;
-  margin-top: 1.2em;
+  font-family: var(--font-display-serif), ui-serif, Georgia, serif;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1.15;
+  margin-top: 1.3em;
 }
 .prose-doc h2 {
   font-size: 1.3rem;
-  font-weight: 620;
-  margin-top: 1em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.2em;
 }
 .prose-doc h3 {
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   font-weight: 600;
-  margin-top: 0.9em;
+  margin-top: 1em;
 }
 .prose-doc ul {
   list-style: disc;
@@ -89,17 +254,20 @@ body {
   list-style: decimal;
   padding-left: 1.4em;
 }
+.prose-doc li::marker {
+  color: var(--faint);
+}
 .prose-doc ul[data-type="taskList"] {
   list-style: none;
-  padding-left: 0.2em;
+  padding-left: 0.1em;
 }
 .prose-doc ul[data-type="taskList"] li {
   display: flex;
-  gap: 0.5em;
+  gap: 0.6em;
   align-items: flex-start;
 }
 .prose-doc ul[data-type="taskList"] li > label {
-  margin-top: 0.3em;
+  margin-top: 0.38em;
   user-select: none;
 }
 .prose-doc ul[data-type="taskList"] li > label input {
@@ -108,48 +276,56 @@ body {
   height: 1rem;
 }
 .prose-doc ul[data-type="taskList"] li[data-checked="true"] > div {
-  color: var(--muted);
+  color: var(--faint);
   text-decoration: line-through;
 }
 .prose-doc ul[data-type="taskList"] li > div {
   flex: 1;
 }
 .prose-doc blockquote {
-  border-left: 3px solid var(--line);
+  border-left: 2px solid var(--line-strong);
   padding-left: 1em;
   color: var(--muted);
+  font-style: italic;
 }
 .prose-doc code {
   background: var(--panel-2);
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.08em 0.35em;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.875em;
+  font-size: 0.85em;
 }
 .prose-doc pre {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 0.8em 1em;
+  padding: 0.9em 1.1em;
   overflow-x: auto;
+  line-height: 1.6;
 }
 .prose-doc pre code {
   background: none;
+  border: 0;
   padding: 0;
 }
 .prose-doc a {
   color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) ease-out;
+}
+.prose-doc a:hover {
+  text-decoration-color: var(--accent);
 }
 .prose-doc hr {
   border-color: var(--line);
-  margin: 1.5em 0;
+  margin: 1.75em 0;
 }
 .prose-doc p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: var(--muted);
-  opacity: 0.6;
+  color: var(--faint);
   float: left;
   height: 0;
   pointer-events: none;

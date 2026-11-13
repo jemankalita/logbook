@@ -20,7 +20,7 @@ export default async function CalendarPage() {
   const result = await getCalendarSnapshot(todayDay);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="rise mx-auto flex max-w-3xl flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold md:text-3xl">Calendar</h1>
@@ -34,7 +34,7 @@ export default async function CalendarPage() {
       {result.state === "unconfigured" ? <CalendarSetup /> : null}
 
       {result.state === "error" ? (
-        <p role="alert" className="rounded-2xl border border-danger/40 bg-danger/10 p-4 text-sm">
+        <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm">
           Couldn&apos;t reach Google Calendar: {result.error} It will retry on your next visit.
         </p>
       ) : null}
@@ -55,7 +55,7 @@ export default async function CalendarPage() {
             {buildAgenda(result.snapshot.events, todayDay, AGENDA_DAYS, timeZone).map((d) => {
               const empty = d.allDay.length === 0 && d.timed.length === 0;
               return (
-                <section key={d.day} className={`rounded-2xl border border-line bg-panel p-4 ${d.day === todayDay ? "ring-1 ring-accent/50" : ""}`}>
+                <section key={d.day} className={`rounded-xl border border-line bg-panel shadow-card p-4 ${d.day === todayDay ? "ring-1 ring-accent/50" : ""}`}>
                   <h2 className="mb-1 flex items-baseline gap-2 px-2">
                     <span className="font-medium">{dayHeading(d.day, todayDay)}</span>
                     <span className="text-xs text-muted">{formatDay(d.day, { month: "short", day: "numeric" })}</span>

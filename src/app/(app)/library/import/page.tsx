@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { and, count, eq, isNull } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
 import { getDb } from "@/db/client";
 import { items } from "@/db/schema";
 import { cls } from "@/components/cls";
 import { notionIdFrom } from "@/lib/import/notion/convert";
 import { BookmarkletLink, EnrichRunner, ImportForm } from "./import-tools";
 import { NotionImport } from "./notion-import";
+import { BackLink, PageHeader } from "@/components/page-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Import · Library · Logbook" };
@@ -42,11 +41,9 @@ export default async function ImportPage() {
   const notionConfigured = Boolean(process.env.NOTION_TOKEN?.trim() && notionIdFrom(process.env.NOTION_ROOT_PAGE));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <Link href="/library" className={`${cls.btnGhost} self-start`}>
-        <ArrowLeft className="size-4" aria-hidden /> Library
-      </Link>
-      <h1 className={cls.h1}>Import &amp; capture tools</h1>
+    <div className="rise mx-auto flex max-w-3xl flex-col gap-5">
+      <BackLink href="/library">Library</BackLink>
+      <PageHeader title="Import & capture" description="Bring in what you already have, and set up one-click saving from your browser and phone." />
 
       <Step n={1} title="Import Chrome bookmarks">
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
@@ -94,7 +91,7 @@ export default async function ImportPage() {
         <h2 className="mb-2 font-medium text-fg">Other ways to save</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <kbd className="rounded border border-line px-1">Ctrl</kbd>+<kbd className="rounded border border-line px-1">K</kbd> anywhere in Logbook → paste a link.
+            <kbd className="rounded-[5px] border border-line bg-panel-2 px-1">Ctrl</kbd>+<kbd className="rounded-[5px] border border-line bg-panel-2 px-1">K</kbd> anywhere in Logbook → paste a link.
           </li>
           <li>
             The <span className="text-fg">Chrome extension</span> in the <code>extension/</code> folder: right-click any page or link → “Save to Logbook”.

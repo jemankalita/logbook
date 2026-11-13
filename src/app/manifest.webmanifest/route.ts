@@ -13,8 +13,8 @@ const MANIFEST = {
   start_url: "/",
   scope: "/",
   display: "standalone",
-  background_color: "#191919",
-  theme_color: "#191919",
+  background_color: "#0b0c0e",
+  theme_color: "#0b0c0e",
   icons: [
     { src: "/pwa-icon/192", sizes: "192x192", type: "image/png", purpose: "any" },
     { src: "/pwa-icon/512", sizes: "512x512", type: "image/png", purpose: "any" },

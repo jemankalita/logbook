@@ -29,7 +29,7 @@ export function OppForm({ opp, compact = false }: { opp?: Opportunity; compact?:
           <label className={cls.label} htmlFor={`o-type-${key}`}>
             Type
           </label>
-          <input id={`o-type-${key}`} name="type" list={`o-types-${key}`} maxLength={60} defaultValue={opp?.type ?? ""} className={cls.input} />
+          <input id={`o-type-${key}`} name="type" list={`o-types-${key}`} maxLength={60} placeholder="Internship, hackathon…" defaultValue={opp?.type ?? ""} className={cls.input} />
           <datalist id={`o-types-${key}`}>
             {OPP_TYPES.map((t) => (
               <option key={t} value={t} />

@@ -44,7 +44,7 @@ export function isHappeningNow(event: CalendarEvent, now: Date): boolean {
   return !event.allDay && new Date(event.start) <= now && now < new Date(event.end);
 }
 
-export const CALENDAR_COLORS = ["#4f8cff", "#39d353", "#f59e0b", "#ec4899", "#a78bfa", "#22d3ee"];
+export const CALENDAR_COLORS = ["#3987e5", "#199e70", "#c98500", "#d55181", "#9085e9", "#d95926"];
 
 export function calendarColor(index: number): string {
   return CALENDAR_COLORS[index % CALENDAR_COLORS.length];

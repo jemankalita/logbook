@@ -19,7 +19,7 @@ export function CaptureForm({ url, title, text, folders }: { url: string; title:
     const href = state?.ok ? `/library/${result.id}` : `/notes/${result.id}`;
     return (
       <div className="flex flex-col items-center gap-4 py-6 text-center">
-        <span className="grid size-12 place-items-center rounded-full bg-success text-2xl text-black" aria-hidden>
+        <span className="grid size-12 place-items-center rounded-full bg-success text-2xl text-bg" aria-hidden>
           ✓
         </span>
         <p role="status" className="font-medium">

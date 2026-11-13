@@ -156,7 +156,7 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div role="dialog" aria-modal="true" aria-label="Search and quick capture" className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl shadow-black/50">
+      <div role="dialog" aria-modal="true" aria-label="Search and quick capture" className="w-full max-w-xl overflow-hidden rounded-xl border border-line bg-panel shadow-card shadow-pop">
         <div className="flex items-center gap-2 border-b border-line px-4">
           <Search className="size-4 shrink-0 text-muted" aria-hidden />
           <input
@@ -184,9 +184,9 @@ export function CommandPalette() {
             aria-controls={listId}
             aria-activedescendant={commands[active] ? `${listId}-${active}` : undefined}
             placeholder="Paste a link, type a task or note, or search…"
-            className="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-muted/70"
+            className="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-faint"
           />
-          <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-muted sm:block">Esc</kbd>
+          <kbd className="hidden rounded-[5px] border border-line bg-panel-2 px-1 text-[10px] text-muted sm:block">Esc</kbd>
         </div>
 
         {status ? (

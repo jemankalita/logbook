@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FolderPlus, Pencil, Search, Upload } from "lucide-react";
+import { Bookmark, FolderPlus, Inbox, Pencil, Search, SearchX, Upload } from "lucide-react";
 import { cls } from "@/components/cls";
 import { FolderTree, type FolderSelection } from "@/components/library/folder-tree";
 import { AddLinkForm, FolderForm } from "@/components/library/forms";
@@ -9,6 +9,8 @@ import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
 import { descendantIds, flattenTree, folderBreadcrumbs, getFolderTree, ITEM_STATUSES, libraryCounts, listItems, type ItemStatus } from "@/lib/queries/library";
 import { deleteFolder } from "./actions";
+import { EmptyState, Kbd } from "@/components/page-ui";
+import { Segmented } from "@/components/segmented";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Library · Logbook" };
@@ -63,9 +65,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const editing = Boolean(current && params.edit === "1");
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row">
+    <div className="rise mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row">
       <aside className="lg:w-60 lg:shrink-0">
-        <details className="rounded-2xl border border-line bg-panel p-3 lg:sticky lg:top-6 lg:border-0 lg:bg-transparent lg:p-0" open>
+        <details className="rounded-xl border border-line bg-panel shadow-card p-3 lg:sticky lg:top-6 lg:border-0 lg:bg-transparent lg:p-0" open>
           <summary className="cursor-pointer list-none text-sm font-medium lg:hidden">Folders ▾</summary>
           <div className="mt-3 lg:mt-0">
             <FolderTree tree={tree} selected={selected} counts={counts} />
@@ -85,27 +87,29 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <header className="flex flex-col gap-1">
+        <header className="flex flex-col gap-2">
           {crumbs.length > 1 ? (
-            <p className="text-xs text-muted">
+            <p className={cls.eyebrow}>
               {crumbs.slice(0, -1).map((c) => (
                 <span key={c.id}>
-                  <Link href={`/library?folder=${c.id}`} className="hover:text-fg">
+                  <Link href={`/library?folder=${c.id}`} className="transition-colors duration-150 hover:text-fg">
                     {c.name}
                   </Link>{" "}
                   /{" "}
                 </span>
               ))}
             </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
+          ) : (
+            <p className={cls.eyebrow}>Library</p>
+          )}
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className={cls.h1}>
               {current?.emoji ? `${current.emoji} ` : ""}
               {title}
             </h1>
-            <span className="tabular text-sm text-muted">{total} links</span>
+            <span className="tabular text-sm text-muted">{total} {total === 1 ? "link" : "links"}</span>
             {current ? (
-              <Link href={hrefWith(params, { edit: editing ? undefined : "1" })} className={cls.btnGhost}>
+              <Link href={hrefWith(params, { edit: editing ? undefined : "1" })} className={`${cls.btnGhost} self-center`}>
                 <Pencil className="size-4" aria-hidden /> {editing ? "Close" : "Edit folder"}
               </Link>
             ) : null}
@@ -129,42 +133,36 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
           <form action="/library" className="relative min-w-0 flex-1 sm:max-w-xs">
             {params.folder ? <input type="hidden" name="folder" value={params.folder} /> : null}
             {status ? <input type="hidden" name="status" value={status} /> : null}
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted" aria-hidden />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
             <label className="sr-only" htmlFor="lib-q">
               Search links
             </label>
             <input id="lib-q" name="q" type="search" defaultValue={q} placeholder="Search links…" className={`${cls.input} pl-8`} />
           </form>
-          <nav className="flex rounded-lg border border-line bg-panel-2 p-0.5 text-sm" aria-label="Status">
-            {[undefined, ...ITEM_STATUSES].map((s) => (
-              <Link
-                key={s ?? "any"}
-                href={hrefWith(params, { status: s, page: undefined })}
-                aria-current={s === status ? "page" : undefined}
-                className={`rounded-md px-3 py-1 transition-colors ${s === status ? "bg-panel text-fg shadow" : "text-muted hover:text-fg"}`}
-              >
-                {s ? STATUS_LABELS[s] : "Any"}
-              </Link>
-            ))}
-          </nav>
+          <Segmented
+            label="Status"
+            items={[undefined, ...ITEM_STATUSES].map((s) => ({ href: hrefWith(params, { status: s, page: undefined }), label: s ? STATUS_LABELS[s] : "Any", active: s === status }))}
+          />
         </div>
 
         {rows.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">
-            {q ? (
-              <>Nothing matches “{q}”.</>
-            ) : counts.links === 0 ? (
-              <>
-                Your Library is empty. Paste a link above, press <kbd className="rounded border border-line px-1">Ctrl</kbd>+<kbd className="rounded border border-line px-1">K</kbd> anywhere, or{" "}
-                <Link href="/library/import" className="text-accent hover:underline">
-                  import your Chrome bookmarks
+          q ? (
+            <EmptyState icon={SearchX} title={`Nothing matches “${q}”`}>Try a shorter search, or clear the status filter.</EmptyState>
+          ) : counts.links === 0 ? (
+            <EmptyState
+              icon={Bookmark}
+              title="Your library is empty"
+              action={
+                <Link href="/library/import" className={cls.btn}>
+                  Import Chrome bookmarks
                 </Link>
-                .
-              </>
-            ) : (
-              <>Nothing here yet.</>
-            )}
-          </div>
+              }
+            >
+              Paste a link above, or press <Kbd>Ctrl</Kbd> <Kbd>K</Kbd> anywhere to save one.
+            </EmptyState>
+          ) : (
+            <EmptyState icon={Inbox} title="Nothing here yet">Links you file in this view will show up here.</EmptyState>
+          )
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {rows.map((item) => (

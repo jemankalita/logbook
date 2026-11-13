@@ -5,6 +5,7 @@ import { paths, tasks } from "@/db/schema";
 import { cls } from "@/components/cls";
 import { SubmitButton } from "@/components/ui";
 import { createPath } from "./actions";
+import { PageHeader } from "@/components/page-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Paths · Logbook" };
@@ -26,18 +27,15 @@ export default async function PathsPage() {
     .orderBy(asc(paths.position), asc(paths.name));
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <div>
-        <h1 className={cls.h1}>Paths</h1>
-        <p className="mt-1 text-sm text-muted">Long-term roadmaps — a plan you write, plus the tasks that get you there.</p>
-      </div>
+    <div className="rise mx-auto flex max-w-4xl flex-col gap-5">
+      <PageHeader eyebrow="Goals" title="Paths" description="Long-term roadmaps — a plan you write, plus the tasks that get you there." />
       <ul className="grid gap-3 sm:grid-cols-2">
         {rows.map((p) => {
           const total = Number(p.total);
           const pct = total ? Math.round((p.done / total) * 100) : 0;
           return (
             <li key={p.id}>
-              <Link href={`/paths/${p.id}`} className={`${cls.card} flex h-full flex-col gap-2 p-4 transition hover:border-muted/40`}>
+              <Link href={`/paths/${p.id}`} className={`${cls.card} ${cls.cardHover} flex h-full flex-col gap-2 p-5`}>
                 <span className="flex items-center gap-2 font-medium">
                   <span className="text-2xl" aria-hidden>
                     {p.emoji ?? "🧭"}

@@ -32,7 +32,7 @@ export default async function CapturePage({ searchParams }: { searchParams: Prom
       <h1 className="flex items-center gap-2 text-lg font-semibold">
         <span aria-hidden>📓</span> Save to Logbook
       </h1>
-      <div className="rounded-2xl border border-line bg-panel p-4">
+      <div className="rounded-xl border border-line bg-panel shadow-card p-4">
         <CaptureForm url={url} title={one("title")} text={remainingText} folders={folders} />
       </div>
     </main>

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/ui";
 import { itemSearchCondition } from "@/lib/queries/library";
 import { excerpt } from "@/lib/rich-text";
 import { createNote } from "./actions";
+import { PageHeader } from "@/components/page-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notes · Logbook" };
@@ -26,18 +27,22 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className={cls.h1}>Notes</h1>
-        <form action={createNote}>
-          <SubmitButton pendingLabel="Creating…">
-            <Plus className="size-4" aria-hidden /> New note
-          </SubmitButton>
-        </form>
-      </header>
+    <div className="rise mx-auto flex max-w-5xl flex-col gap-5">
+      <PageHeader
+        eyebrow="Knowledge"
+        title="Notes"
+        description="Longer thinking — summaries, drafts, ideas. Link to anything in your library."
+        actions={
+          <form action={createNote}>
+            <SubmitButton pendingLabel="Creating…">
+              <Plus className="size-4" aria-hidden /> New note
+            </SubmitButton>
+          </form>
+        }
+      />
 
       <form action="/notes" className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted" aria-hidden />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
         <label className="sr-only" htmlFor="notes-q">
           Search notes
         </label>
@@ -45,7 +50,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       </form>
 
       {notes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">{q ? `No notes match “${q}”.` : "No notes yet. Create one, or press Ctrl+K and type."}</div>
+        <div className="rounded-xl border border-dashed border-line-strong/70 px-6 py-12 text-center text-sm text-muted">{q ? `No notes match “${q}”.` : "No notes yet. Create one, or press Ctrl+K and type."}</div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {notes.map((n) => (

@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { cls } from "@/components/cls";
 import { OppForm } from "@/components/opportunities/opp-ui";
 import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
 import { getOpportunity } from "@/lib/queries/opportunities";
 import { deleteOpportunity } from "../actions";
+import { BackLink, PageHeader } from "@/components/page-ui";
+import { OPP_STATUS_LABELS } from "@/lib/queries/opportunities";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +24,10 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
   if (!opp) notFound();
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <Link href="/opportunities" className={`${cls.btnGhost} self-start`}>
-        <ArrowLeft className="size-4" aria-hidden /> Opportunities
-      </Link>
-      <h1 className={cls.h1}>{opp.name}</h1>
-      <section className={`${cls.card} p-4`}>
+    <div className="rise mx-auto flex max-w-3xl flex-col gap-5">
+      <BackLink href="/opportunities">Opportunities</BackLink>
+      <PageHeader eyebrow={OPP_STATUS_LABELS[opp.status]} title={opp.name} />
+      <section className={`${cls.card} p-5`}>
         <OppForm opp={opp} />
       </section>
       <form action={deleteOpportunity.bind(null, opp.id)}>

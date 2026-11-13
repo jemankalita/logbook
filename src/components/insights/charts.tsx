@@ -3,9 +3,19 @@
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { areaColor, PALETTE } from "@/lib/colors";
 
-const INK_MUTED = "#9b9a97";
-const GRID = "#2f2f2f";
-const TOOLTIP_STYLE = { background: "#262626", border: "1px solid #2f2f2f", borderRadius: 10, color: "#e9e9e7", fontSize: 12 };
+// Mirrors the CSS tokens in globals.css (SVG attributes cannot read CSS variables reliably).
+const INK = "#ecedee"; // --fg
+const INK_MUTED = "#6c7079"; // --faint
+const GRID = "#24262c"; // --line
+const SURFACE = "#131418"; // --panel
+const TOOLTIP_STYLE = {
+  background: "#1a1c21", // --panel-2
+  border: "1px solid #353942", // --line-strong
+  borderRadius: 10,
+  color: INK,
+  fontSize: 12,
+  boxShadow: "0 12px 32px -8px rgb(0 0 0 / 0.6)",
+};
 const CURSOR = { fill: "rgba(255,255,255,0.04)" };
 const MOOD_LABELS = ["", "Rough", "Meh", "Okay", "Good", "Great"];
 
@@ -18,7 +28,7 @@ interface Point {
 function TableView({ rows, unit, keyLabel }: { rows: { key: string; value: number | string }[]; unit: string; keyLabel: string }) {
   return (
     <details className="mt-2 text-xs text-muted">
-      <summary className="cursor-pointer">Show as table</summary>
+      <summary className="cursor-pointer text-faint transition-colors duration-150 hover:text-fg">Show as table</summary>
       <table className="mt-2 w-full text-left">
         <thead>
           <tr>
@@ -41,10 +51,10 @@ function TableView({ rows, unit, keyLabel }: { rows: { key: string; value: numbe
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-panel p-4">
-      <h2 className="font-medium">{title}</h2>
-      {subtitle ? <p className="text-xs text-muted">{subtitle}</p> : null}
-      <div className="mt-3">{children}</div>
+    <section className="rounded-xl border border-line bg-panel p-5 shadow-card">
+      <h2 className="text-sm font-medium">{title}</h2>
+      {subtitle ? <p className="tabular mt-0.5 text-xs text-muted">{subtitle}</p> : null}
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
@@ -90,7 +100,7 @@ export function CategoryBars({ title, subtitle, data, unit, colorBy = "single", 
               <BarChart data={data} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 0 }}>
                 <CartesianGrid horizontal={false} stroke={GRID} />
                 <XAxis type="number" allowDecimals={unit !== "items"} tick={{ fill: INK_MUTED, fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fill: "#e9e9e7", fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" width={110} tick={{ fill: INK, fontSize: 12 }} tickLine={false} axisLine={false} />
                 <Tooltip cursor={CURSOR} contentStyle={TOOLTIP_STYLE} formatter={(v) => [v, unit]} />
                 <Bar dataKey="value" name={unit} fill={PALETTE[0]} radius={[0, 4, 4, 0]} maxBarSize={18} label={{ position: "right", fill: INK_MUTED, fontSize: 11 }}>
                   {colorBy === "area" ? data.map((d) => <Cell key={d.name} fill={areaColor(d.name ?? "")} />) : null}
@@ -120,7 +130,7 @@ export function MoodLine({ data }: { data: { day: string; label: string; mood: n
                 <XAxis dataKey="label" tick={{ fill: INK_MUTED, fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fill: INK_MUTED, fontSize: 11 }} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: INK_MUTED, strokeDasharray: "3 3" }} formatter={(v) => [`${v} · ${MOOD_LABELS[Number(v)] ?? ""}`, "Mood"]} />
-                <Line type="monotone" dataKey="mood" stroke={PALETTE[4]} strokeWidth={2} dot={{ r: 4, fill: PALETTE[4], stroke: "#202020", strokeWidth: 2 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="mood" stroke={PALETTE[4]} strokeWidth={2} dot={{ r: 4, fill: PALETTE[4], stroke: SURFACE, strokeWidth: 2 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

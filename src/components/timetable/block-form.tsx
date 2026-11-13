@@ -92,7 +92,7 @@ export function EditBlockButton({ draft, areas }: { draft: BlockDraft; areas: st
       </button>
       {open ? (
         <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Edit block" className="w-full max-w-2xl rounded-2xl border border-line bg-panel p-4">
+          <div role="dialog" aria-modal="true" aria-label="Edit block" className="w-full max-w-2xl rounded-xl border border-line bg-panel shadow-card p-4">
             <BlockForm draft={draft} areas={areas} onDone={() => setOpen(false)} />
           </div>
         </div>

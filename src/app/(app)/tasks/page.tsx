@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { cls } from "@/components/cls";
+import { CardHeader, PageHeader, Progress } from "@/components/page-ui";
+import { Segmented } from "@/components/segmented";
 import { HabitRow, TaskForm, TaskRow, type TaskFormOptions } from "@/components/tasks/task-ui";
 import { addDays, diffDays, formatDay, today as getToday, type Day } from "@/lib/dates";
 import { getAreas, getHabits, getPathOptions, getRoadmap, getTodayTasks, getUpcomingTasks, TASK_HORIZONS, type Horizon, type Task } from "@/lib/queries/tasks";
@@ -9,17 +10,16 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Tasks · Logbook" };
 
 const VIEW_LABELS: Record<Horizon, string> = { daily: "Today", upcoming: "Upcoming", roadmap: "Roadmap" };
+const VIEW_DESCRIPTIONS: Record<Horizon, string> = {
+  daily: "What needs doing today, and the habits that keep the streaks alive.",
+  upcoming: "Everything with a date ahead of today, grouped by when it lands.",
+  roadmap: "Big goals that take weeks or months, broken into steps.",
+};
 
 function Section({ title, count, children, action }: { title: string; count?: number; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className={`${cls.card} p-4`}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="font-medium">
-          {title}
-          {count !== undefined ? <span className="tabular ml-2 text-sm font-normal text-muted">{count}</span> : null}
-        </h2>
-        {action}
-      </div>
+    <section className={`${cls.card} p-5`}>
+      <CardHeader title={title} count={count} action={action} />
       {children}
     </section>
   );
@@ -40,7 +40,7 @@ async function TodayView({ today, options }: { today: Day; options: TaskFormOpti
             <TaskRow key={t.id} task={t} today={today} options={options} />
           ))}
         </ul>
-        {open.length === 0 ? <p className="px-2 py-3 text-sm text-muted">{done.length ? "All clear for today. 🎉" : "Nothing planned. Add something above or press Ctrl+K."}</p> : null}
+        {open.length === 0 ? <p className="px-2 py-3 text-sm text-muted">{done.length ? "All clear for today." : "Nothing planned. Add something above or press Ctrl+K."}</p> : null}
         {done.length ? (
           <details className="mt-2">
             <summary className="cursor-pointer px-2 text-xs text-muted">Done today ({done.length})</summary>
@@ -95,7 +95,7 @@ async function UpcomingView({ today, options }: { today: Day; options: TaskFormO
 
   return (
     <div className="flex flex-col gap-4">
-      <section className={`${cls.card} p-4`}>
+      <section className={`${cls.card} p-5`}>
         <TaskForm horizon="upcoming" options={options} defaultDue={addDays(today, 1)} />
       </section>
       {rows.length === 0 ? <p className="text-sm text-muted">Nothing coming up.</p> : null}
@@ -124,8 +124,8 @@ async function RoadmapView({ today, options }: { today: Day; options: TaskFormOp
   const items = await getRoadmap();
   return (
     <div className="flex flex-col gap-4">
-      <section className={`${cls.card} p-4`}>
-        <p className="mb-2 text-sm text-muted">Big goals that take weeks or months. Break each into steps; link it to a Path to see it there too.</p>
+      <section className={`${cls.card} p-5`}>
+        <p className="mb-3 text-sm text-muted">Break each goal into steps; link it to a Path to see it there too.</p>
         <TaskForm horizon="roadmap" options={options} />
       </section>
       <div className="grid gap-4 lg:grid-cols-3">
@@ -137,14 +137,12 @@ async function RoadmapView({ today, options }: { today: Day; options: TaskFormOp
                 {list.map((item) => {
                   const doneSteps = item.children.filter((c) => c.status === "done").length;
                   return (
-                    <li key={item.id} className="rounded-xl border border-line bg-panel-2/40 p-2">
+                    <li key={item.id} className="rounded-lg border border-line bg-panel-2/40 p-2">
                       <ul>
                         <TaskRow task={item} today={today} options={options} pathName={item.pathName} />
                       </ul>
                       {item.children.length ? (
-                        <div className="mx-2 mb-1 h-1 overflow-hidden rounded-full bg-panel-2" role="progressbar" aria-valuemin={0} aria-valuemax={item.children.length} aria-valuenow={doneSteps} aria-label="Steps done">
-                          <div className="h-full bg-success" style={{ width: `${(doneSteps / item.children.length) * 100}%` }} />
-                        </div>
+                        <div className="mx-2 mb-1"><Progress value={doneSteps} max={item.children.length} label="Steps done" /></div>
                       ) : null}
                       <ul className="ml-6 flex flex-col">
                         {item.children.map((c) => (
@@ -157,7 +155,7 @@ async function RoadmapView({ today, options }: { today: Day; options: TaskFormOp
                       <div className="mt-2 flex flex-wrap gap-1 px-2">
                         {STATUS_COLUMNS.filter((s) => s.status !== item.status).map((s) => (
                           <form key={s.status} action={setTaskStatus.bind(null, item.id, s.status)}>
-                            <button type="submit" className="rounded-md border border-line px-2 py-0.5 text-xs text-muted hover:text-fg">
+                            <button type="submit" className="h-6 rounded-md border border-line bg-panel px-2 text-[11px] text-muted transition-colors duration-150 hover:border-line-strong hover:text-fg">
                               → {s.label}
                             </button>
                           </form>
@@ -184,25 +182,18 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const options: TaskFormOptions = { paths, areas };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted">{formatDay(today, { weekday: "long", month: "long", day: "numeric" })}</p>
-          <h1 className={cls.h1}>Tasks</h1>
-        </div>
-        <nav className="flex rounded-lg border border-line bg-panel-2 p-0.5 text-sm" aria-label="Task views">
-          {TASK_HORIZONS.map((h) => (
-            <Link
-              key={h}
-              href={h === "daily" ? "/tasks" : `/tasks?view=${h}`}
-              aria-current={h === view ? "page" : undefined}
-              className={`rounded-md px-3 py-1 transition-colors ${h === view ? "bg-panel text-fg shadow" : "text-muted hover:text-fg"}`}
-            >
-              {VIEW_LABELS[h]}
-            </Link>
-          ))}
-        </nav>
-      </header>
+    <div className="rise mx-auto flex max-w-6xl flex-col gap-5">
+      <PageHeader
+        eyebrow={formatDay(today, { weekday: "long", month: "long", day: "numeric" })}
+        title="Tasks"
+        description={VIEW_DESCRIPTIONS[view]}
+        actions={
+          <Segmented
+            label="Task views"
+            items={TASK_HORIZONS.map((h) => ({ href: h === "daily" ? "/tasks" : `/tasks?view=${h}`, label: VIEW_LABELS[h], active: h === view }))}
+          />
+        }
+      />
       {view === "daily" ? <TodayView today={today} options={options} /> : view === "upcoming" ? <UpcomingView today={today} options={options} /> : <RoadmapView today={today} options={options} />}
     </div>
   );
