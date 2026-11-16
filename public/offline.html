@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Offline · Logbook</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #0b0c0e; color: #ecedee; font: 15px/1.5 system-ui, sans-serif; }
+      main { max-width: 22rem; padding: 1.5rem; text-align: center; }
+      h1 { font-size: 1.15rem; margin: 0 0 .5rem; }
+      p { color: #9a9da6; margin: 0 0 1.25rem; }
+      button { font: inherit; color: #fff; background: #8098ff; border: 0; border-radius: .6rem; padding: .55rem 1rem; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>You're offline</h1>
+      <p>Logbook needs a connection to load your data. Try again once you're back online.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>
