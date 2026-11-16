@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Folder, FolderOpen, Inbox, Layers, Star } from "lucide-react";
 import { cls } from "@/components/cls";
 import type { FolderNode } from "@/lib/queries/library";
+import { Emoji } from "@/components/emoji";
 
 export type FolderSelection = { kind: "all" } | { kind: "unsorted" } | { kind: "starred" } | { kind: "folder"; id: string };
 
@@ -48,7 +49,7 @@ function Branch({ nodes, selected }: { nodes: FolderNode[]; selected: FolderSele
               icon={
                 n.emoji ? (
                   <span aria-hidden className="block w-4 text-center text-sm leading-none">
-                    {n.emoji}
+                    <Emoji char={n.emoji} size="1rem" />
                   </span>
                 ) : (
                   <Icon className="size-4" aria-hidden />

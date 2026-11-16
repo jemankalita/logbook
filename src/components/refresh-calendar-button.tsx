@@ -1,5 +1,6 @@
 "use client";
 
+import { cls } from "./cls";
 import { RefreshCw } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { refreshCalendar } from "@/app/(app)/actions";
@@ -10,7 +11,7 @@ function Button() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-panel-2 px-3 py-1.5 text-sm transition hover:brightness-125 active:scale-[0.97] disabled:opacity-60"
+      className={cls.btn}
     >
       <RefreshCw className={`size-3.5 ${pending ? "animate-spin" : ""}`} aria-hidden />
       {pending ? "Refreshing…" : "Refresh"}

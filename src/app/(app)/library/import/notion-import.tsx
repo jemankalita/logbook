@@ -6,6 +6,7 @@ import { cls } from "@/components/cls";
 import { DATABASE_KINDS, SOURCE_KIND_LABELS, SOURCE_KINDS, type SourceKind } from "@/lib/import/notion/convert";
 import type { NotionSource } from "@/lib/import/notion/importer";
 import { importNotionChunk, scanNotion } from "./notion-actions";
+import { Emoji } from "@/components/emoji";
 
 type RowState = { status: "pending" | "running" | "done" | "error"; added: number; skipped: number; failed: number; cursor: string | null; error?: string };
 
@@ -120,7 +121,7 @@ export function NotionImport({ configured }: { configured: boolean }) {
                   return (
                     <tr key={s.id} className="border-t border-line align-top">
                       <td className="px-3 py-2">
-                        <span aria-hidden>{s.isDatabase ? "🗂 " : "📄 "}</span>
+                        <Emoji char={s.isDatabase ? "🗂" : "📄"} size="1rem" className="mr-1.5" />
                         {s.title}
                         {s.parent ? <span className="block text-xs text-muted">inside {s.parent}</span> : null}
                         {r?.error ? <span className="mt-1 block text-xs text-danger">{r.error}</span> : null}

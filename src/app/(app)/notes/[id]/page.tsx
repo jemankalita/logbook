@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { ArrowLeft, Pin, Trash2 } from "lucide-react";
+import { Pin, Trash2 } from "lucide-react";
 import { getDb } from "@/db/client";
 import { items } from "@/db/schema";
 import { cls } from "@/components/cls";
 import { DocEditor } from "@/components/editor/doc-editor";
 import { TitleInput } from "@/components/editor/title-input";
+import { BackLink } from "@/components/page-ui";
 import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
 import { isDoc } from "@/lib/rich-text";
@@ -34,11 +34,9 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
   return (
     <div className="rise mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/notes" className={cls.btnGhost}>
-          <ArrowLeft className="size-4" aria-hidden /> Notes
-        </Link>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">Edited {edited}</span>
+        <BackLink href="/notes">Notes</BackLink>
+        <div className="flex items-center gap-1">
+          <span className="tabular mr-1 text-xs text-faint">Edited {edited}</span>
           <form action={toggleNotePin.bind(null, note.id)}>
             <button type="submit" className={cls.btnGhost} aria-pressed={note.starred}>
               <Pin className={`size-4 ${note.starred ? "text-accent" : ""}`} aria-hidden /> {note.starred ? "Pinned" : "Pin"}
@@ -52,9 +50,7 @@ export default async function NotePage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
       <TitleInput initial={note.title} save={renameNote.bind(null, note.id)} label="Note title" />
-      <div className="pt-6">
-        <DocEditor initial={isDoc(note.body) ? note.body : null} save={saveNoteBody.bind(null, note.id)} label="Note" />
-      </div>
+      <DocEditor initial={isDoc(note.body) ? note.body : null} save={saveNoteBody.bind(null, note.id)} label="Note" />
     </div>
   );
 }

@@ -103,14 +103,14 @@ describe("Notion block conversion", () => {
     expect(classifyDatabase("Daily Log")).toBe("journal");
     expect(classifyDatabase("Opportunities")).toBe("opportunities");
     expect(classifyDatabase("AI Tools")).toBe("library");
-    expect(classifyPage("VIT → US Masters", "RESEARCH")).toBe("path");
+    expect(classifyPage("Masters Abroad", "RESEARCH")).toBe("path");
     expect(classifyPage("movies to watch : ")).toBe("watchlist");
     expect(classifyPage("PEOPLE TO STUDY ( FOLLOW ) ")).toBe("people");
     expect(classifyPage("good paying companies ", "Vaults")).toBe("note");
     expect(notionIdFrom("https://app.notion.com/p/3d63cfe2d25c813e8451e7c2b8a8c6ee?pvs=204")).toBe("3d63cfe2-d25c-813e-8451-e7c2b8a8c6ee");
     expect(notionIdFrom("https://www.notion.so/My-Page-3d63cfe2d25c813e8451e7c2b8a8c6ee")).toBe("3d63cfe2-d25c-813e-8451-e7c2b8a8c6ee");
     expect(notionIdFrom("not an id")).toBeNull();
-    expect(cleanTitle("🧠 Jeman’s Brain")).toBe("Jeman’s Brain");
+    expect(cleanTitle("🧠 My Second Brain")).toBe("My Second Brain");
   });
 });
 
@@ -135,7 +135,7 @@ const ROOT: NotionBlock[] = [
   blk("db-tasks", "child_database", { title: "Daily Tasks" }),
   blk("db-tt", "child_database", { title: "Daily Time Table" }),
   blk("h2", "heading_1", { rich_text: rt("RESEARCH") }),
-  blk("pg-us", "child_page", { title: "VIT → US Masters" }),
+  blk("pg-us", "child_page", { title: "Masters Abroad" }),
   blk("h3", "heading_1", { rich_text: rt("Vaults") }),
   blk("db-opps", "child_database", { title: "Opportunities" }),
   blk("db-tools", "child_database", { title: "AI Tools" }),
@@ -202,7 +202,7 @@ describe("Notion import (integration)", () => {
     expect(byId["db-opps"].kind).toBe("opportunities");
     expect(byId["db-tools"].kind).toBe("library");
     expect(byId["pg-movies"].kind).toBe("watchlist");
-    expect(byId["db-unis"]).toMatchObject({ kind: "library", isDatabase: true, parent: "VIT → US Masters" });
+    expect(byId["db-unis"]).toMatchObject({ kind: "library", isDatabase: true, parent: "Masters Abroad" });
   });
 
   it("imports everything into the right places, and a second run adds nothing", async () => {
@@ -232,11 +232,11 @@ describe("Notion import (integration)", () => {
     expect(links.find((i) => i.title === "Idea without link")!.kind).toBe("note");
 
     const folderRows = await db.select().from(schema.folders);
-    const parent = folderRows.find((f) => f.name === "VIT → US Masters")!;
+    const parent = folderRows.find((f) => f.name === "Masters Abroad")!;
     expect(folderRows.find((f) => f.name === "Universities")!.parentId).toBe(parent.id);
 
     const [path_] = await db.select().from(schema.paths);
-    expect(path_).toMatchObject({ name: "VIT → US Masters", emoji: "🎓" });
+    expect(path_).toMatchObject({ name: "Masters Abroad", emoji: "🎓" });
     expect(path_.bodyText).toContain("Collect programs");
 
     const [list] = await db.select().from(schema.lists);

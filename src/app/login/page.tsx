@@ -10,10 +10,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
       {/* Quiet backdrop: a soft light from above and a faint ruled-paper grid that fades out. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgb(128_152_255/0.10),transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,var(--glow),transparent)]" />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgb(255_255_255/0.035)_1px,transparent_1px)] bg-[size:100%_32px] [mask-image:radial-gradient(60%_55%_at_50%_45%,#000,transparent)]"
+        className="ruled pointer-events-none absolute inset-0 [--rule-gap:32px] [mask-image:radial-gradient(60%_55%_at_50%_45%,#000,transparent)]"
       />
 
       <div className="rise relative w-full max-w-[22rem]">

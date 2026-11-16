@@ -88,16 +88,17 @@ export default async function OpportunitiesPage() {
   return (
     <div className="rise mx-auto flex max-w-[90rem] flex-col gap-5">
       <PageHeader eyebrow="Goals" title="Opportunities" meta={`${all.length - closed.length} open`} description="Internships, fellowships, hackathons and programs — from first spotted to final result." />
-      <section className={`${cls.card} p-5`}>
+      <section className={`${cls.card} p-4 md:p-5`}>
         <OppForm compact />
       </section>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
-        <div className="grid min-w-[60rem] grid-cols-6 gap-3">
+      {/* Phones: one column at a time, swipe sideways with snapping. Wider: the whole board. */}
+      <div className="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-2 md:mx-0 md:snap-none md:px-0" aria-label="Board" role="region" tabIndex={0}>
+        <div className="flex gap-3 md:grid md:min-w-[60rem] md:grid-cols-6">
           {BOARD.map((status) => {
             const col = all.filter((o) => o.status === status);
             return (
-              <section key={status} className="flex flex-col rounded-xl border border-line bg-panel/40 p-2" aria-label={OPP_STATUS_LABELS[status]}>
+              <section key={status} className="flex w-[80%] shrink-0 snap-start flex-col rounded-xl border border-line bg-panel/40 p-2 sm:w-[45%] md:w-auto" aria-label={OPP_STATUS_LABELS[status]}>
                 <h2 className="mb-2 flex h-7 items-center gap-2 px-1.5 text-[13px] font-medium text-muted">
                   <span className={`size-1.5 rounded-full ${STAGE_DOT[status]}`} aria-hidden />
                   {OPP_STATUS_LABELS[status]}

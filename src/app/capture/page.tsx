@@ -1,3 +1,5 @@
+import { LogoMark } from "@/components/brand";
+import { cls } from "@/components/cls";
 import { requirePageSession } from "@/lib/auth/require-session";
 import { flattenTree, getFolderTree } from "@/lib/queries/library";
 import { normalizeUrl } from "@/lib/url";
@@ -28,11 +30,15 @@ export default async function CapturePage({ searchParams }: { searchParams: Prom
   const folders = flattenTree(await getFolderTree()).map((f) => ({ id: f.id, label: `${"  ".repeat(f.depth)}${f.emoji ? `${f.emoji} ` : ""}${f.name}` }));
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 py-6">
-      <h1 className="flex items-center gap-2 text-lg font-semibold">
-        <span aria-hidden>📓</span> Save to Logbook
-      </h1>
-      <div className="rounded-xl border border-line bg-panel shadow-card p-4">
+    <main className="rise mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-4 py-8">
+      <header className="flex items-center gap-3">
+        <LogoMark className="size-9" />
+        <div>
+          <p className={cls.eyebrow}>Logbook</p>
+          <h1 className="font-display text-[1.75rem] leading-none tracking-[-0.01em]">Save a link</h1>
+        </div>
+      </header>
+      <div className={`${cls.card} p-5`}>
         <CaptureForm url={url} title={one("title")} text={remainingText} folders={folders} />
       </div>
     </main>

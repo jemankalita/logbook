@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Pencil } from "lucide-react";
 import { saveBlock } from "@/app/(app)/timetable/actions";
 import { cls, FormMessage, SubmitButton } from "@/components/ui";
@@ -34,7 +35,7 @@ export function BlockForm({ draft, areas, onDone }: { draft: BlockDraft; areas: 
           <label className={cls.label} htmlFor={`b-title-${key}`}>
             What
           </label>
-          <input id={`b-title-${key}`} name="title" required maxLength={200} defaultValue={draft.title} placeholder="DSA lecture, Gym, GRE verbal…" className={cls.input} />
+          <input id={`b-title-${key}`} autoFocus={Boolean(draft.id)} name="title" required maxLength={200} defaultValue={draft.title} placeholder="DSA lecture, Gym, GRE verbal…" className={cls.input} />
         </div>
         <div>
           <label className={cls.label} htmlFor={`b-day-${key}`}>
@@ -83,20 +84,41 @@ export function BlockForm({ draft, areas, onDone }: { draft: BlockDraft; areas: 
   );
 }
 
-export function EditBlockButton({ draft, areas }: { draft: BlockDraft; areas: string[] }) {
+export function EditBlockButton({ draft, areas, className }: { draft: BlockDraft; areas: string[]; className: string }) {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const close = useCallback(() => dialogRef.current?.close(), []);
+
+  // A modal <dialog> gives a focus trap, an inert page behind it, Esc to close and focus return to this button.
+  useEffect(() => {
+    if (open) dialogRef.current?.showModal();
+  }, [open]);
+
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={`Edit ${draft.title}`} className="text-muted hover:text-fg">
-        <Pencil className="size-3" aria-hidden />
+      <button type="button" onClick={() => setOpen(true)} aria-label={`Edit ${draft.title}`} title="Edit" className={className}>
+        <Pencil className="size-3.5" aria-hidden />
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Edit block" className="w-full max-w-2xl rounded-xl border border-line bg-panel shadow-card p-4">
-            <BlockForm draft={draft} areas={areas} onDone={() => setOpen(false)} />
-          </div>
-        </div>
-      ) : null}
+      {/* Portalled to <body> so the form is never nested inside the card's own forms. */}
+      {open
+        ? createPortal(
+            <dialog
+              ref={dialogRef}
+              aria-labelledby={`edit-block-${draft.id}`}
+              onClose={() => setOpen(false)}
+              onMouseDown={(e) => e.target === e.currentTarget && close()}
+              className="m-auto w-[calc(100%-2rem)] max-w-2xl animate-pop-in rounded-xl border border-line bg-panel p-0 text-fg shadow-pop backdrop:animate-fade-in backdrop:bg-black/60 backdrop:backdrop-blur-[2px]"
+            >
+              <div className="p-5">
+                <h2 id={`edit-block-${draft.id}`} className="mb-4 font-display text-2xl leading-none">
+                  Edit block
+                </h2>
+                <BlockForm draft={draft} areas={areas} onDone={close} />
+              </div>
+            </dialog>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

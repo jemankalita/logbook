@@ -10,6 +10,7 @@ const SAVE_DELAY_MS = 800;
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
 const LABELS: Record<SaveState, string> = { saved: "Saved", dirty: "Unsaved changes", saving: "Saving…", error: "Couldn't save — retrying when you type" };
+const STATUS_DOT: Record<SaveState, string> = { saved: "bg-success", dirty: "bg-warn", saving: "bg-warn animate-pulse", error: "bg-danger" };
 
 /** Editor that autosaves through a server action (bound to the record it edits). */
 export function DocEditor({
@@ -78,11 +79,17 @@ export function DocEditor({
   }, [flush]);
 
   return (
-    <div className="relative">
-      <p aria-live="polite" className={`absolute -top-7 right-0 text-xs ${state === "error" ? "text-danger" : "text-muted"}`}>
-        {LABELS[state]}
-      </p>
-      <RichEditor initial={initial} onChange={onChange} label={label} placeholder={placeholder} />
-    </div>
+    <RichEditor
+      initial={initial}
+      onChange={onChange}
+      label={label}
+      placeholder={placeholder}
+      status={
+        <p aria-live="polite" className={`flex items-center gap-1.5 text-xs ${state === "error" ? "text-danger" : "text-faint"}`}>
+          <span aria-hidden className={`size-1.5 rounded-full ${STATUS_DOT[state]}`} />
+          {LABELS[state]}
+        </p>
+      }
+    />
   );
 }

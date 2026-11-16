@@ -11,6 +11,7 @@ import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
 import { deleteList } from "../actions";
 import { BackLink, PageHeader } from "@/components/page-ui";
+import { Emoji } from "@/components/emoji";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function ListPage({ params, searchParams }: { params: Promi
       <PageHeader
         title={
           <>
-            <span aria-hidden className="mr-2">{list.emoji ?? copy.emoji}</span>
+            <span aria-hidden className="mr-2.5 inline-block"><Emoji char={list.emoji ?? copy.emoji} size="0.9em" /></span>
             {list.name}
           </>
         }

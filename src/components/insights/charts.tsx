@@ -3,20 +3,20 @@
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { areaColor, PALETTE } from "@/lib/colors";
 
-// Mirrors the CSS tokens in globals.css (SVG attributes cannot read CSS variables reliably).
-const INK = "#ecedee"; // --fg
-const INK_MUTED = "#6c7079"; // --faint
-const GRID = "#24262c"; // --line
-const SURFACE = "#131418"; // --panel
+// CSS variables, so the charts follow the active theme (SVG presentation attributes accept var()).
+const INK = "var(--fg)";
+const INK_MUTED = "var(--faint)";
+const GRID = "var(--line)";
+const SURFACE = "var(--panel)";
 const TOOLTIP_STYLE = {
-  background: "#1a1c21", // --panel-2
-  border: "1px solid #353942", // --line-strong
+  background: "var(--panel-2)",
+  border: "1px solid var(--line-strong)",
   borderRadius: 10,
   color: INK,
   fontSize: 12,
-  boxShadow: "0 12px 32px -8px rgb(0 0 0 / 0.6)",
+  boxShadow: "var(--sh-pop)",
 };
-const CURSOR = { fill: "rgba(255,255,255,0.04)" };
+const CURSOR = { fill: "var(--panel-2)", fillOpacity: 0.6 };
 const MOOD_LABELS = ["", "Rough", "Meh", "Okay", "Good", "Great"];
 
 interface Point {

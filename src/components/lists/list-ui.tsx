@@ -26,7 +26,7 @@ export function NewListForm() {
         <label className={cls.label} htmlFor="nl-emoji">
           Emoji
         </label>
-        <input id="nl-emoji" name="emoji" maxLength={16} placeholder="📋" className={`${cls.input} w-14 text-center`} />
+        <input id="nl-emoji" name="emoji" maxLength={16} placeholder="📋" className={cls.inputEmoji} />
       </div>
       <div className="min-w-40 flex-1">
         <label className={cls.label} htmlFor="nl-name">
@@ -57,7 +57,7 @@ export function EditListForm({ list }: { list: { id: string; name: string; emoji
   return (
     <form action={action} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="id" value={list.id} />
-      <input name="emoji" aria-label="Emoji" maxLength={16} defaultValue={list.emoji ?? ""} className={`${cls.input} w-14 text-center`} />
+      <input name="emoji" aria-label="Emoji" maxLength={16} defaultValue={list.emoji ?? ""} className={cls.inputEmoji} />
       <input name="name" aria-label="List name" required maxLength={80} defaultValue={list.name} className={`${cls.input} min-w-40 flex-1`} />
       <select name="kind" aria-label="Type" defaultValue={list.kind} className={cls.select}>
         <option value="generic">General</option>
@@ -76,7 +76,7 @@ function RatingInput({ name, defaultValue }: { name: string; defaultValue: numbe
     <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Rating">
       <input type="hidden" name={name} value={value || ""} />
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} star${n > 1 ? "s" : ""}`} onClick={() => setValue(value === n ? 0 : n)} className="p-0.5">
+        <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} star${n > 1 ? "s" : ""}`} onClick={() => setValue(value === n ? 0 : n)} className="grid size-7 place-items-center">
           <Star className={`size-4 ${n <= value ? "fill-warn text-warn" : "text-muted"}`} aria-hidden />
         </button>
       ))}

@@ -99,7 +99,7 @@ export function FolderForm({
         <label className="sr-only" htmlFor={`f-emoji-${key}`}>
           Emoji
         </label>
-        <input id={`f-emoji-${key}`} name="emoji" defaultValue={folder?.emoji ?? ""} placeholder="📁" maxLength={16} className={`${cls.input} w-12 text-center`} />
+        <input id={`f-emoji-${key}`} name="emoji" defaultValue={folder?.emoji ?? ""} placeholder="📁" maxLength={16} className={cls.inputEmoji} />
         <label className="sr-only" htmlFor={`f-name-${key}`}>
           Folder name
         </label>

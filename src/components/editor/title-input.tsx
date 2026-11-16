@@ -36,7 +36,7 @@ export function TitleInput({ initial, save, label, placeholder = "Untitled" }: {
             void commit(e.currentTarget.value);
           }
         }}
-        className="w-full bg-transparent text-3xl font-bold outline-none placeholder:text-muted/50"
+        className="w-full bg-transparent font-display text-[2rem] leading-[1.15] tracking-[-0.01em] outline-none placeholder:text-faint md:text-[2.5rem]"
       />
       {error ? (
         <p role="alert" className="text-sm text-danger">

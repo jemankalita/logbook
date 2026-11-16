@@ -23,14 +23,14 @@ function Tool({ label, active, onClick, children }: ToolProps) {
       aria-pressed={active}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`grid size-8 place-items-center rounded-md transition ${active ? "bg-line text-fg" : "text-muted hover:bg-panel-2 hover:text-fg"}`}
+      className={`grid size-8 place-items-center rounded-md transition-colors duration-150 ${active ? "bg-panel-3 text-fg" : "text-muted hover:bg-panel-2 hover:text-fg"}`}
     >
       {children}
     </button>
   );
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, status }: { editor: Editor; status?: React.ReactNode }) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -62,7 +62,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div role="toolbar" aria-label="Formatting" className="sticky top-0 z-10 -mx-1 mb-2 flex flex-wrap gap-0.5 border-b border-line bg-bg/95 px-1 py-1 backdrop-blur">
+    <div role="toolbar" aria-label="Formatting" className="sticky top-14 z-10 -mx-1 mb-4 flex flex-wrap items-center gap-0.5 border-b border-line bg-bg/90 px-1 py-1 backdrop-blur md:top-0">
       <Tool label="Heading 1" active={s.h1} onClick={() => chain().toggleHeading({ level: 1 }).run()}>
         <Heading1 className="size-4" aria-hidden />
       </Tool>
@@ -96,6 +96,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       <Tool label="Link" active={s.link} onClick={editLink}>
         <Link2 className="size-4" aria-hidden />
       </Tool>
+      {status ? <div className="ml-auto pl-2">{status}</div> : null}
     </div>
   );
 }
@@ -109,11 +110,14 @@ export function RichEditor({
   placeholder = "Start writing…  (# heading, - list, [ ] checklist)",
   onChange,
   label,
+  status,
 }: {
   initial: DocNode | null;
   placeholder?: string;
   onChange: (doc: DocNode) => void;
   label: string;
+  /** Shown at the right end of the toolbar (save state). */
+  status?: React.ReactNode;
 }) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -134,7 +138,7 @@ export function RichEditor({
 
   return (
     <div>
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} status={status} />
       <EditorContent editor={editor} />
     </div>
   );

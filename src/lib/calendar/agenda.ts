@@ -1,5 +1,6 @@
 import { addDays, dayInTimezone, diffDays, type Day } from "@/lib/dates";
 import type { CalendarEvent } from "./parse";
+import { googleColor } from "./items";
 
 export interface AgendaDay {
   day: Day;
@@ -44,8 +45,7 @@ export function isHappeningNow(event: CalendarEvent, now: Date): boolean {
   return !event.allDay && new Date(event.start) <= now && now < new Date(event.end);
 }
 
-export const CALENDAR_COLORS = ["#3987e5", "#199e70", "#c98500", "#d55181", "#9085e9", "#d95926"];
-
+/** Same palette as the calendar page (Google's own event colours). */
 export function calendarColor(index: number): string {
-  return CALENDAR_COLORS[index % CALENDAR_COLORS.length];
+  return googleColor(index);
 }

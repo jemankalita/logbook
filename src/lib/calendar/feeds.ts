@@ -6,6 +6,8 @@ import { parseCalendar, type CalendarEvent } from "./parse";
 export const CALENDAR_TAG = "calendar";
 export const CALENDAR_REVALIDATE_SECONDS = 60 * 60; // hourly
 export const AGENDA_DAYS = 14;
+/** Longest range one request may ask for (a 6-week month grid, or the 30-day schedule). */
+export const MAX_RANGE_DAYS = 42;
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_FEED_CHARS = 20 * 1024 * 1024;
@@ -66,12 +68,12 @@ function describeError(err: unknown): string {
   return "Couldn't load this calendar.";
 }
 
-async function loadSnapshot(firstDay: Day): Promise<CalendarSnapshot> {
+async function loadSnapshot(firstDay: Day, dayCount: number): Promise<CalendarSnapshot> {
   const urls = getFeedUrls();
   // ±1 day of slack in UTC covers any timezone offset; the agenda trims to exact local days.
   const range = {
     start: new Date(`${addDays(firstDay, -1)}T00:00:00Z`),
-    end: new Date(`${addDays(firstDay, AGENDA_DAYS + 1)}T00:00:00Z`),
+    end: new Date(`${addDays(firstDay, dayCount + 1)}T00:00:00Z`),
   };
 
   const results = await Promise.allSettled(
@@ -103,8 +105,8 @@ async function loadSnapshot(firstDay: Day): Promise<CalendarSnapshot> {
 const cachedSnapshot = unstable_cache(
   // The 2nd argument is never read: arguments form the cache key, so changing the URLs busts the cache.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (firstDay: Day, _feedsKey: string) => loadSnapshot(firstDay),
-  ["calendar-snapshot-v1"],
+  (firstDay: Day, dayCount: number, _feedsKey: string) => loadSnapshot(firstDay, dayCount),
+  ["calendar-snapshot-v2"],
   { revalidate: CALENDAR_REVALIDATE_SECONDS, tags: [CALENDAR_TAG] },
 );
 
@@ -113,13 +115,14 @@ export type SnapshotResult =
   | { state: "ok"; snapshot: CalendarSnapshot }
   | { state: "error"; error: string };
 
-/** Cached for an hour per day; the Refresh button busts it early. */
-export async function getCalendarSnapshot(firstDay: Day): Promise<SnapshotResult> {
+/** Cached for an hour per range; the Refresh button busts it early. */
+export async function getCalendarSnapshot(firstDay: Day, dayCount: number = AGENDA_DAYS): Promise<SnapshotResult> {
   const urls = getFeedUrls();
   if (urls.length === 0) return { state: "unconfigured" };
   const feedsKey = createHash("sha256").update(urls.join("\n")).digest("hex").slice(0, 16);
   try {
-    return { state: "ok", snapshot: await cachedSnapshot(firstDay, feedsKey) };
+    const days = Math.min(Math.max(1, Math.round(dayCount)), MAX_RANGE_DAYS);
+    return { state: "ok", snapshot: await cachedSnapshot(firstDay, days, feedsKey) };
   } catch (err) {
     return { state: "error", error: describeError(err) };
   }

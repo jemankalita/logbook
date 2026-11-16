@@ -6,7 +6,9 @@ import { motion } from "motion/react";
 import { Lock, Search, ShieldOff } from "lucide-react";
 import { logout, signOutEverywhere } from "@/app/(app)/actions";
 import { springs } from "@/lib/motion-tokens";
+import type { Theme } from "@/lib/theme";
 import { Wordmark } from "./brand";
+import { ThemeToggle } from "./theme-toggle";
 import { cls } from "./cls";
 import { OPEN_PALETTE_EVENT } from "./command-palette";
 import { isActivePath, NAV_GROUPS, type NavItem } from "./nav-items";
@@ -39,7 +41,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 const footerBtn = "flex h-8 items-center gap-2 rounded-lg px-2.5 text-[13px] text-muted transition-colors duration-150 hover:bg-panel-2/50 hover:text-fg";
 
 /** Desktop navigation rail. Phones get <MobileNav /> instead. */
-export function Sidebar() {
+export function Sidebar({ theme }: { theme: Theme }) {
   const pathname = usePathname();
 
   return (
@@ -85,6 +87,7 @@ export function Sidebar() {
             Lock this device
           </button>
         </form>
+        <ThemeToggle initial={theme} className={`${footerBtn} w-8 justify-center px-0`} />
         <form
           action={signOutEverywhere}
           onSubmit={(e) => {

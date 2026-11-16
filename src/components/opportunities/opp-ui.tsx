@@ -18,8 +18,8 @@ export function OppForm({ opp, compact = false }: { opp?: Opportunity; compact?:
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3">
       {opp ? <input type="hidden" name="id" value={opp.id} /> : null}
-      <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
-        <div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+        <div className="col-span-2 sm:col-span-1">
           <label className={cls.label} htmlFor={`o-name-${key}`}>
             Name
           </label>

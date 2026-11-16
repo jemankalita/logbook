@@ -4,6 +4,7 @@ import { calendarColor, formatTimeRange, isHappeningNow } from "@/lib/calendar/a
 import type { CalendarEvent } from "@/lib/calendar/parse";
 import { cls } from "./cls";
 import { CardHeader } from "./page-ui";
+import { EmojiText } from "./emoji";
 
 export function EventRow({ event, timeZone, now }: { event: CalendarEvent; timeZone: string; now: Date }) {
   const live = isHappeningNow(event, now);
@@ -14,7 +15,7 @@ export function EventRow({ event, timeZone, now }: { event: CalendarEvent; timeZ
       <span aria-hidden className="my-0.5 w-[3px] shrink-0 self-stretch rounded-full" style={{ background: calendarColor(event.calendarIndex) }} />
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-          <span className="break-words">{event.title}</span>
+          <EmojiText text={event.title} className="break-words" />
           {live ? (
             <span className="inline-flex items-center gap-1 rounded-md bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
               <span className="size-1.5 rounded-full bg-success" aria-hidden />

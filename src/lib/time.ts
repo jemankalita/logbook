@@ -47,6 +47,12 @@ export function startOfWeek(day: Day): Day {
   return addDays(day, -((weekday(day) + 6) % 7));
 }
 
+/** Whole Monday→Sunday weeks ending with the week that contains `day` (for calendar-style grids). */
+export function weekGrid(day: Day, weeks: number): Day[] {
+  const start = addDays(startOfWeek(day), -(weeks - 1) * 7);
+  return Array.from({ length: weeks * 7 }, (_, i) => addDays(start, i));
+}
+
 export function minutesBetween(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 60_000);
 }

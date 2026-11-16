@@ -24,7 +24,7 @@ function Checkbox({ checked, label, onToggle }: { checked: boolean; label: strin
       aria-checked={checked}
       aria-label={label}
       onClick={onToggle}
-      className={`grid size-5 shrink-0 place-items-center rounded-md border transition ${checked ? "border-success bg-success text-bg" : "border-muted/60 hover:border-fg"}`}
+      className={`relative grid size-5 shrink-0 place-items-center rounded-md border transition-colors duration-150 after:absolute after:-inset-2 ${checked ? "border-success bg-success text-bg" : "border-muted/60 hover:border-fg"}`}
     >
       {checked ? <Check className="size-3.5" aria-hidden /> : null}
     </button>
@@ -253,7 +253,7 @@ export function TaskForm({
         </div>
       ) : null}
       {!habit && !more ? (
-        <button type="button" onClick={() => setMore(true)} className="self-start text-xs text-muted hover:text-fg">
+        <button type="button" onClick={() => setMore(true)} className="-my-1 self-start py-1.5 text-xs text-muted transition-colors duration-150 hover:text-fg">
           + date, priority, area…
         </button>
       ) : null}

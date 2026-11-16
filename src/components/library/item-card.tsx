@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- remote preview images from arbitrary sites */
 import Link from "next/link";
 import { Check, ExternalLink, Star } from "lucide-react";
 import { setItemStatus, toggleStar } from "@/app/(app)/library/actions";
@@ -6,38 +5,14 @@ import { cls } from "@/components/cls";
 import type { Item } from "@/lib/queries/library";
 import { hostnameOf } from "@/lib/url";
 import { TYPE_LABELS } from "./labels";
+import { Favicon, LinkCover } from "./link-cover";
 
-export function Favicon({ item, size = "size-4" }: { item: Pick<Item, "favicon" | "url" | "title">; size?: string }) {
-  if (item.favicon) {
-    return <img src={item.favicon} alt="" loading="lazy" referrerPolicy="no-referrer" className={`${size} shrink-0 rounded-[4px] object-contain`} />;
-  }
-  const letter = (hostnameOf(item.url) || item.title || "?").charAt(0).toUpperCase();
-  return (
-    <span aria-hidden className={`${size} grid shrink-0 place-items-center rounded-[4px] bg-panel-3 text-[10px] font-semibold text-muted`}>
-      {letter}
-    </span>
-  );
-}
+export { Favicon };
 
 function Thumb({ item }: { item: Item }) {
   return (
     <div className="relative aspect-[1.91/1] w-full overflow-hidden rounded-t-[11px] border-b border-line bg-panel-2">
-      {item.image ? (
-        <img
-          src={item.image}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="img-edge size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-        />
-      ) : (
-        // No preview image: a quiet ruled tile with the site's icon, so cards still line up.
-        <div className="grid size-full place-items-center bg-[linear-gradient(to_bottom,rgb(255_255_255/0.03)_1px,transparent_1px)] bg-[size:100%_14px]">
-          <span className="grid size-11 place-items-center rounded-xl border border-line bg-panel shadow-raised">
-            <Favicon item={item} size="size-5" />
-          </span>
-        </div>
-      )}
+      <LinkCover item={item} imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
     </div>
   );
 }

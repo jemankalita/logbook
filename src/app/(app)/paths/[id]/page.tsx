@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { getDb } from "@/db/client";
 import { paths } from "@/db/schema";
 import { cls } from "@/components/cls";
 import { DocEditor } from "@/components/editor/doc-editor";
 import { TitleInput } from "@/components/editor/title-input";
 import { PathMetaForm } from "@/components/editor/path-meta-form";
+import { BackLink, CardHeader, Progress } from "@/components/page-ui";
 import { TaskForm, TaskRow } from "@/components/tasks/task-ui";
 import { ConfirmButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
@@ -42,38 +42,25 @@ export default async function PathPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_360px]">
       <div className="flex min-w-0 flex-col gap-4">
-        <Link href="/paths" className={`${cls.btnGhost} self-start`}>
-          <ArrowLeft className="size-4" aria-hidden /> Paths
-        </Link>
-        <div className="flex items-center gap-3">
-          <span className="text-3xl" aria-hidden>
-            {path.emoji ?? "🧭"}
-          </span>
-          <div className="flex-1">
-            <TitleInput initial={path.name} save={renamePath.bind(null, path.id)} label="Path name" placeholder="Untitled path" />
-          </div>
+        <BackLink href="/paths">Paths</BackLink>
+        <div>
+          <p className={`${cls.eyebrow} mb-2`}>Path</p>
+          <TitleInput initial={path.name} save={renamePath.bind(null, path.id)} label="Path name" placeholder="Untitled path" />
         </div>
         <PathMetaForm id={path.id} emoji={path.emoji} description={path.description} />
-        <div className="pt-6">
-          <DocEditor
-            initial={isDoc(path.body) ? path.body : null}
-            save={savePathBody.bind(null, path.id)}
-            label="Path plan"
-            placeholder="Write the plan: milestones, resources, timeline…  ([ ] makes a checklist)"
-          />
-        </div>
+        <DocEditor
+          initial={isDoc(path.body) ? path.body : null}
+          save={savePathBody.bind(null, path.id)}
+          label="Path plan"
+          placeholder="Write the plan: milestones, resources, timeline…  ([ ] makes a checklist)"
+        />
       </div>
 
       <aside className="flex flex-col gap-4">
         <section className={`${cls.card} p-4`}>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-medium">Tasks</h2>
-            <span className="tabular text-sm text-muted">
-              {done}/{pathTasks.length} · {pct}%
-            </span>
-          </div>
-          <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Path progress">
-            <div className="h-full bg-success" style={{ width: `${pct}%` }} />
+          <CardHeader title="Tasks" action={<span className="tabular text-xs text-faint">{done}/{pathTasks.length} · {pct}%</span>} />
+          <div className="mb-4">
+            <Progress value={done} max={pathTasks.length} label="Path progress" />
           </div>
           <TaskForm horizon="roadmap" options={options} pathId={path.id} compact />
           <ul className="mt-2 flex flex-col">

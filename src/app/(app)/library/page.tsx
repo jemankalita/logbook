@@ -11,6 +11,7 @@ import { descendantIds, flattenTree, folderBreadcrumbs, getFolderTree, ITEM_STAT
 import { deleteFolder } from "./actions";
 import { EmptyState, Kbd } from "@/components/page-ui";
 import { Segmented } from "@/components/segmented";
+import { Emoji } from "@/components/emoji";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Library · Logbook" };
@@ -104,7 +105,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
           )}
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h1 className={cls.h1}>
-              {current?.emoji ? `${current.emoji} ` : ""}
+              {current?.emoji ? <Emoji char={current.emoji} size="0.9em" className="mr-3" /> : null}
               {title}
             </h1>
             <span className="tabular text-sm text-muted">{total} {total === 1 ? "link" : "links"}</span>

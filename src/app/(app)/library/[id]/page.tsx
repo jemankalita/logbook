@@ -1,15 +1,14 @@
-/* eslint-disable @next/next/no-img-element -- remote preview images from arbitrary sites */
 import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, RefreshCw, Trash2 } from "lucide-react";
+import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
 import { Tweet } from "react-tweet";
 import { cls } from "@/components/cls";
-import { Favicon } from "@/components/library/item-card";
+import { Favicon, LinkCover } from "@/components/library/link-cover";
 import { TYPE_LABELS } from "@/components/library/labels";
+import { BackLink } from "@/components/page-ui";
 import { ConfirmButton, SubmitButton } from "@/components/ui";
 import { uuid } from "@/lib/actions";
-import { flattenTree, folderBreadcrumbs, getFolderTree, getItem } from "@/lib/queries/library";
+import { flattenTree, folderBreadcrumbs, getFolderTree, getItem, type Item } from "@/lib/queries/library";
 import { hostnameOf, tweetIdFromUrl, youtubeIdFromUrl } from "@/lib/url";
 import { deleteItem, refreshPreview } from "../actions";
 import { ItemForm } from "./item-form";
@@ -22,11 +21,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `${item?.title ?? "Link"} · Logbook` };
 }
 
-function Embed({ url, image }: { url: string | null; image: string | null }) {
+function Embed({ item }: { item: Item }) {
+  const { url } = item;
   const tweetId = tweetIdFromUrl(url);
   if (tweetId) {
     return (
-      <div data-theme="dark" className="flex justify-center">
+      <div className="flex justify-center">
         <Suspense fallback={<div className="h-48 w-full animate-pulse rounded-xl bg-panel-2" />}>
           <Tweet id={tweetId} />
         </Suspense>
@@ -49,8 +49,12 @@ function Embed({ url, image }: { url: string | null; image: string | null }) {
       </div>
     );
   }
-  if (image) {
-    return <img src={image} alt="" referrerPolicy="no-referrer" className="max-h-96 w-full rounded-xl border border-line object-cover" />;
+  if (item.image) {
+    return (
+      <div className="aspect-[1.91/1] max-h-96 w-full overflow-hidden rounded-xl border border-line bg-panel-2">
+        <LinkCover item={item} />
+      </div>
+    );
   }
   return null;
 }
@@ -68,9 +72,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="rise mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href={backHref} className={`${cls.btnGhost} self-start`}>
-        <ArrowLeft className="size-4" aria-hidden /> {crumbs.length ? crumbs.map((c) => c.name).join(" / ") : "Library"}
-      </Link>
+      <BackLink href={backHref}>{crumbs.length ? crumbs.map((c) => c.name).join(" / ") : "Library"}</BackLink>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <article className="flex min-w-0 flex-col gap-4">
@@ -80,14 +82,14 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
               <span className="truncate">{hostnameOf(item.url)}</span>
               <span className={cls.chip}>{TYPE_LABELS[item.type]}</span>
             </div>
-            <h1 className="break-words text-xl font-semibold leading-snug md:text-2xl">{item.title}</h1>
+            <h1 className="break-words font-display text-[1.75rem] leading-[1.15] tracking-[-0.01em] md:text-[2.25rem]">{item.title}</h1>
             <p className="text-xs text-muted">
               Saved {saved}
               {item.source ? ` · from ${item.source}` : ""}
             </p>
           </header>
 
-          <Embed url={item.url} image={item.image} />
+          <Embed item={item} />
 
           {item.description && item.type !== "tweet" ? <p className="whitespace-pre-line text-sm leading-relaxed text-fg/85">{item.description}</p> : null}
 

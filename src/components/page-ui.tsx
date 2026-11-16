@@ -50,7 +50,7 @@ export function CardHeader({ title, count, href, linkLabel, action }: { title: R
       </h2>
       {action}
       {href ? (
-        <Link href={href} className="group -mr-1 inline-flex items-center gap-0.5 rounded-md px-1 text-xs text-faint transition-colors duration-150 hover:text-fg">
+        <Link href={href} className="group -mr-1 inline-flex h-6 items-center gap-0.5 rounded-md px-1 text-xs text-faint transition-colors duration-150 hover:text-fg">
           {linkLabel}
           <ArrowUpRight className="size-3.5 transition-transform duration-150 group-hover:-translate-y-px group-hover:translate-x-px" aria-hidden />
         </Link>

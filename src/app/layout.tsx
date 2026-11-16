@@ -1,7 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
+import { parseTheme, THEME_COLOR, THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
+
+async function currentTheme() {
+  return parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,14 +36,15 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Logbook", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#0b0c0e",
-  colorScheme: "dark",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await currentTheme();
+  return { themeColor: THEME_COLOR[theme], colorScheme: theme };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const theme = await currentTheme();
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme}>
       <body className={`${geistSans.variable} ${geistMono.variable} ${displaySerif.variable} antialiased`}>
         {children}
         <PwaRegister />

@@ -12,10 +12,12 @@ export const cls = {
   /** Add to a card that is itself a link / button. */
   cardHover: "transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-panel-2/60",
   input: `${field} h-9 px-3`,
+  /** Square one-character field (emoji pickers). Separate because `w-full` in `input` would win over a width override. */
+  inputEmoji: `${field.replace("w-full ", "")} h-9 w-12 shrink-0 px-0 text-center text-base`,
   textarea: `${field} px-3 py-2 leading-relaxed`,
   select: `${field} h-9 px-2.5`,
   btn: `${button} h-9 border border-line bg-panel-2 px-3 text-fg shadow-raised hover:border-line-strong hover:bg-panel-3`,
-  btnPrimary: `${button} h-9 bg-fg px-3.5 text-bg shadow-raised hover:bg-white`,
+  btnPrimary: `${button} h-9 bg-fg px-3.5 text-bg shadow-raised hover:bg-fg/85`,
   btnGhost: `${button} h-8 px-2 font-normal text-muted hover:bg-panel-2 hover:text-fg`,
   btnDanger: `${button} h-9 border border-danger/30 px-3 text-danger hover:border-danger/50 hover:bg-danger/10`,
   label: "mb-1.5 block text-xs font-medium text-muted",

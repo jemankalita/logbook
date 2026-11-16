@@ -85,6 +85,19 @@ export async function getTodayTasks(today: Day): Promise<Task[]> {
   return rows.filter((t) => t.status !== "done" || (t.doneAt && dayInTimezone(t.doneAt, tz) === today));
 }
 
+/**
+ * One Notion-style list: every one-off top-level task of a horizon ("daily" = Daily Tasks,
+ * "upcoming" = Overall To-Do), open ones first, then by priority and due date.
+ */
+export async function getTaskList(horizon: "daily" | "upcoming"): Promise<Task[]> {
+  const db = await getDb();
+  return db
+    .select()
+    .from(tasks)
+    .where(and(isNull(tasks.recurrence), isNull(tasks.parentId), eq(tasks.horizon, horizon)))
+    .orderBy(sql`case ${tasks.status} when 'in_progress' then 0 when 'not_started' then 1 else 2 end`, priorityOrder, sql`${tasks.dueDate} asc nulls last`, asc(tasks.createdAt));
+}
+
 export async function getUpcomingTasks(today: Day): Promise<Task[]> {
   const db = await getDb();
   return db

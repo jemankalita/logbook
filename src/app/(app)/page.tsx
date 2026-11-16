@@ -103,13 +103,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone }).format(todayAttendance.checkedInAt)
     : null;
 
+  // Optional first name for the greeting; kept in the environment so it never lands in the code.
+  const ownerName = process.env.OWNER_NAME?.trim().slice(0, 40) || null;
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
       <PageHeader
         eyebrow={formatDay(todayDay, { weekday: "long", month: "long", day: "numeric" })}
         title={
           <>
-            {greeting(timeZone)}, <em className="text-muted">Jeman</em>
+            {greeting(timeZone)}
+            {ownerName ? (
+              <>
+                , <em className="text-muted">{ownerName}</em>
+              </>
+            ) : null}
           </>
         }
       />

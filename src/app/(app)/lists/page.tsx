@@ -6,6 +6,7 @@ import { cls } from "@/components/cls";
 import { KIND_COPY } from "@/components/lists/kind-copy";
 import { NewListForm } from "@/components/lists/list-ui";
 import { PageHeader } from "@/components/page-ui";
+import { Emoji } from "@/components/emoji";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lists · Logbook" };
@@ -35,7 +36,7 @@ export default async function ListsPage() {
           <li key={l.id}>
             <Link href={`/lists/${l.id}`} className={`${cls.card} ${cls.cardHover} flex h-full flex-col gap-1 p-5`}>
               <span className="mb-2 grid size-10 place-items-center rounded-xl border border-line bg-panel-2 text-xl shadow-raised" aria-hidden>
-                {l.emoji ?? KIND_COPY[l.kind].emoji}
+                <Emoji char={l.emoji ?? KIND_COPY[l.kind].emoji} size="1.4rem" />
               </span>
               <span className="font-medium">{l.name}</span>
               <span className="tabular text-xs text-muted">

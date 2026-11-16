@@ -19,6 +19,13 @@ const KIND_LABEL: Record<GraphKind, string> = { folder: "Folders", link: "Links"
 type SimNode = GraphNode & SimulationNodeDatum;
 type SimLink = SimulationLinkDatum<SimNode>;
 
+/** Canvas can't read CSS variables, so pull the active theme's colours from the root element. */
+function themeInk() {
+  const css = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  return { canvas: read("--bg", "#0b0c0e"), fg: read("--fg", "#ecedee"), muted: read("--muted", "#9a9da6") };
+}
+
 const radius = (n: GraphNode) => Math.min(18, 3 + Math.sqrt(n.degree) * 2 + (n.kind === "folder" || n.kind === "path" ? 3 : 0));
 
 export function KnowledgeGraph({ data }: { data: GraphData }) {
@@ -67,10 +74,15 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     let dragging: SimNode | null = null;
     let panning: { x: number; y: number } | null = null;
     let moved = false;
+    let downAt = { x: 0, y: 0 };
+    // A finger always wobbles a little; only count it as a drag past a few pixels so taps still open.
+    const TAP_SLOP_PX = 6;
+    const pastSlop = (e: PointerEvent) => Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > TAP_SLOP_PX;
     // d3 mutates nodes/links in place, so every run gets fresh copies.
     const nodes: SimNode[] = view.nodes.map((n) => ({ ...n }));
     const links: SimLink[] = view.edges.map((e) => ({ source: e.source, target: e.target }));
     const neighbours = view.neighbours;
+    let ink = themeInk();
 
     const resize = () => {
       width = wrap.clientWidth;
@@ -102,12 +114,14 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         const s = l.source as SimNode;
         const t = l.target as SimNode;
         const lit = hovered && (s.id === hovered.id || t.id === hovered.id);
-        ctx.strokeStyle = lit ? "rgba(236,237,238,0.6)" : "rgba(154,157,166,0.16)";
+        ctx.strokeStyle = lit ? ink.fg : ink.muted;
+        ctx.globalAlpha = lit ? 0.6 : 0.2;
         ctx.beginPath();
         ctx.moveTo(s.x ?? 0, s.y ?? 0);
         ctx.lineTo(t.x ?? 0, t.y ?? 0);
         ctx.stroke();
       }
+      ctx.globalAlpha = 1;
       for (const n of nodes) {
         const dim = (hovered && n.id !== hovered.id && !focus?.has(n.id)) || (q && !n.label.toLowerCase().includes(q));
         ctx.globalAlpha = dim ? 0.2 : 1;
@@ -116,13 +130,13 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         ctx.arc(n.x ?? 0, n.y ?? 0, radius(n), 0, Math.PI * 2);
         ctx.fill();
         ctx.lineWidth = 2 / transform.k;
-        ctx.strokeStyle = "#0b0c0e";
+        ctx.strokeStyle = ink.canvas;
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
       // Labels: big nodes always, the hovered node and its neighbours, and search matches.
       ctx.font = `${12 / transform.k}px system-ui, sans-serif`;
-      ctx.fillStyle = "#ecedee";
+      ctx.fillStyle = ink.fg;
       ctx.textAlign = "center";
       for (const n of nodes) {
         const show = n === hovered || focus?.has(n.id) || (q && n.label.toLowerCase().includes(q)) || (!hovered && !q && n.degree >= 6 && transform.k > 0.6);
@@ -133,6 +147,12 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     }
     sim.on("tick", draw);
     redrawRef.current = draw;
+    // Re-read colours and repaint when the theme is switched.
+    const themeObserver = new MutationObserver(() => {
+      ink = themeInk();
+      draw();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     const toWorld = (e: PointerEvent | WheelEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -155,6 +175,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
     const onDown = (e: PointerEvent) => {
       canvas.setPointerCapture(e.pointerId);
       moved = false;
+      downAt = { x: e.clientX, y: e.clientY };
       const n = pick(e);
       if (n) {
         dragging = n;
@@ -166,7 +187,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
         const p = toWorld(e);
         dragging.fx = p.x;
         dragging.fy = p.y;
-        moved = true;
+        if (pastSlop(e)) moved = true;
         return;
       }
       if (panning) {
@@ -228,6 +249,7 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointerleave", onUp);
       canvas.removeEventListener("wheel", onWheel);
+      themeObserver.disconnect();
     };
   }, [view, router]);
 
@@ -279,13 +301,16 @@ export function KnowledgeGraph({ data }: { data: GraphData }) {
             </p>
           </div>
         ) : null}
-        <p className="pointer-events-none absolute bottom-2 right-3 text-[11px] text-muted">Scroll to zoom · drag to pan · drag a dot to move it</p>
+        <p className="pointer-events-none absolute bottom-2 right-3 text-[11px] text-muted">
+          <span className="[@media(pointer:coarse)]:hidden">Scroll to zoom · drag to pan · drag a dot to move it</span>
+          <span className="hidden [@media(pointer:coarse)]:inline">Drag to pan · tap a dot to open it</span>
+        </p>
       </div>
       <details className="text-sm">
-        <summary className="cursor-pointer text-muted">Most connected</summary>
+        <summary className="inline-flex h-8 items-center text-muted transition-colors duration-150 hover:text-fg">Most connected</summary>
         <ul className="mt-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
           {hubs.map((n) => (
-            <li key={n.id} className="flex items-center gap-2">
+            <li key={n.id} className="flex min-w-0 items-center gap-2">
               <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: KIND_COLOR[n.kind] }} />
               {n.href ? (
                 <a href={n.href} className="truncate hover:underline">

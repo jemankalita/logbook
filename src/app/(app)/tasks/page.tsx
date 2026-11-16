@@ -1,18 +1,19 @@
 import { cls } from "@/components/cls";
 import { CardHeader, PageHeader, Progress } from "@/components/page-ui";
 import { Segmented } from "@/components/segmented";
+import { TaskTable } from "@/components/tasks/task-table";
 import { HabitRow, TaskForm, TaskRow, type TaskFormOptions } from "@/components/tasks/task-ui";
-import { addDays, diffDays, formatDay, today as getToday, type Day } from "@/lib/dates";
-import { getAreas, getHabits, getPathOptions, getRoadmap, getTodayTasks, getUpcomingTasks, TASK_HORIZONS, type Horizon, type Task } from "@/lib/queries/tasks";
+import { formatDay, today as getToday, type Day } from "@/lib/dates";
+import { getAreas, getHabits, getPathOptions, getRoadmap, getTaskList, TASK_HORIZONS, type Horizon } from "@/lib/queries/tasks";
 import { setTaskStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tasks · Logbook" };
 
-const VIEW_LABELS: Record<Horizon, string> = { daily: "Today", upcoming: "Upcoming", roadmap: "Roadmap" };
+const VIEW_LABELS: Record<Horizon, string> = { daily: "Daily Tasks", upcoming: "Overall To-Do", roadmap: "Roadmap" };
 const VIEW_DESCRIPTIONS: Record<Horizon, string> = {
-  daily: "What needs doing today, and the habits that keep the streaks alive.",
-  upcoming: "Everything with a date ahead of today, grouped by when it lands.",
+  daily: "Your day-to-day checklist — like the Daily Tasks database in Notion — plus the habits that keep streaks alive.",
+  upcoming: "Everything on your plate, dated or not — like Overall Tasks TODO in Notion.",
   roadmap: "Big goals that take weeks or months, broken into steps.",
 };
 
@@ -25,34 +26,13 @@ function Section({ title, count, children, action }: { title: string; count?: nu
   );
 }
 
-async function TodayView({ today, options }: { today: Day; options: TaskFormOptions }) {
-  const [habits, todays] = await Promise.all([getHabits(today), getTodayTasks(today)]);
-  const open = todays.filter((t) => t.status !== "done");
-  const done = todays.filter((t) => t.status === "done");
+async function DailyView({ today, options }: { today: Day; options: TaskFormOptions }) {
+  const [habits, list] = await Promise.all([getHabits(today), getTaskList("daily")]);
   const habitsDone = habits.scheduled.filter((h) => h.doneToday).length;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Section title="Today's tasks" count={open.length}>
-        <TaskForm horizon="daily" options={options} compact />
-        <ul className="mt-2 flex flex-col">
-          {open.map((t) => (
-            <TaskRow key={t.id} task={t} today={today} options={options} />
-          ))}
-        </ul>
-        {open.length === 0 ? <p className="px-2 py-3 text-sm text-muted">{done.length ? "All clear for today." : "Nothing planned. Add something above or press Ctrl+K."}</p> : null}
-        {done.length ? (
-          <details className="mt-2">
-            <summary className="cursor-pointer px-2 text-xs text-muted">Done today ({done.length})</summary>
-            <ul className="mt-1 flex flex-col">
-              {done.map((t) => (
-                <TaskRow key={t.id} task={t} today={today} options={options} />
-              ))}
-            </ul>
-          </details>
-        ) : null}
-      </Section>
-
+    <div className="flex flex-col gap-4">
+      <TaskTable title="Daily Tasks" description="Today's to-dos and quick wins" horizon="daily" tasks={list} today={today} options={options} showEffort />
       <Section title="Habits" count={habits.scheduled.length ? undefined : 0} action={habits.scheduled.length ? <span className="tabular text-sm text-muted">{habitsDone}/{habits.scheduled.length} today</span> : null}>
         <ul className="flex flex-col">
           {habits.scheduled.map((h) => (
@@ -78,40 +58,9 @@ async function TodayView({ today, options }: { today: Day; options: TaskFormOpti
   );
 }
 
-function bucketFor(task: Task, today: Day): string {
-  if (!task.dueDate) return "Someday";
-  const d = diffDays(task.dueDate, today);
-  if (d === 1) return "Tomorrow";
-  if (d <= 7) return "Next 7 days";
-  if (d <= 31) return "This month";
-  return "Later";
-}
-
-async function UpcomingView({ today, options }: { today: Day; options: TaskFormOptions }) {
-  const rows = await getUpcomingTasks(today);
-  const order = ["Tomorrow", "Next 7 days", "This month", "Later", "Someday"];
-  const groups = new Map<string, Task[]>(order.map((b) => [b, []]));
-  for (const t of rows) groups.get(bucketFor(t, today))?.push(t);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <section className={`${cls.card} p-5`}>
-        <TaskForm horizon="upcoming" options={options} defaultDue={addDays(today, 1)} />
-      </section>
-      {rows.length === 0 ? <p className="text-sm text-muted">Nothing coming up.</p> : null}
-      {order
-        .filter((b) => groups.get(b)?.length)
-        .map((b) => (
-          <Section key={b} title={b} count={groups.get(b)?.length}>
-            <ul className="flex flex-col">
-              {groups.get(b)?.map((t) => (
-                <TaskRow key={t.id} task={t} today={today} options={options} />
-              ))}
-            </ul>
-          </Section>
-        ))}
-    </div>
-  );
+async function OverallView({ today, options }: { today: Day; options: TaskFormOptions }) {
+  const list = await getTaskList("upcoming");
+  return <TaskTable title="Overall To-Do" description="The bigger list: applications, projects, things to get to" horizon="upcoming" tasks={list} today={today} options={options} showEffort={false} />;
 }
 
 const STATUS_COLUMNS = [
@@ -194,7 +143,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           />
         }
       />
-      {view === "daily" ? <TodayView today={today} options={options} /> : view === "upcoming" ? <UpcomingView today={today} options={options} /> : <RoadmapView today={today} options={options} />}
+      {view === "daily" ? <DailyView today={today} options={options} /> : view === "upcoming" ? <OverallView today={today} options={options} /> : <RoadmapView today={today} options={options} />}
     </div>
   );
 }

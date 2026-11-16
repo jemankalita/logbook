@@ -7,7 +7,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { Lock, Menu, Search, ShieldOff, X } from "lucide-react";
 import { logout, signOutEverywhere } from "@/app/(app)/actions";
 import { motionTokens, springs } from "@/lib/motion-tokens";
+import type { Theme } from "@/lib/theme";
 import { Wordmark } from "./brand";
+import { ThemeToggle } from "./theme-toggle";
 import { cls } from "./cls";
 import { isActivePath, MOBILE_TABS, NAV_GROUPS } from "./nav-items";
 import { openPalette, SIGN_OUT_EVERYWHERE_MESSAGE } from "./sidebar";
@@ -15,7 +17,7 @@ import { openPalette, SIGN_OUT_EVERYWHERE_MESSAGE } from "./sidebar";
 const tab = "relative flex h-14 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors duration-150";
 
 /** Phone navigation: a slim top bar, a thumb-reach tab bar, and a sheet with everything else. */
-export function MobileNav() {
+export function MobileNav({ theme }: { theme: Theme }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const inTabs = MOBILE_TABS.some((t) => isActivePath(pathname, t.href));
@@ -110,6 +112,7 @@ export function MobileNav() {
                 </div>
               ))}
               <div className="grid grid-cols-2 gap-2 border-t border-line pt-4">
+                <ThemeToggle initial={theme} withLabel className={`${cls.btn} col-span-2 h-11 w-full`} />
                 <form action={logout}>
                   <button type="submit" className={`${cls.btn} h-11 w-full`}>
                     <Lock className="size-4" aria-hidden /> Lock

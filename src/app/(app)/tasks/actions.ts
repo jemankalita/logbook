@@ -131,6 +131,23 @@ export async function toggleTask(id: string): Promise<void> {
   refresh();
 }
 
+const FieldInput = z.discriminatedUnion("field", [
+  z.object({ id: uuid, field: z.literal("priority"), value: blankToNull(PRIORITIES) }),
+  z.object({ id: uuid, field: z.literal("effort"), value: blankToNull(EFFORTS) }),
+  z.object({ id: uuid, field: z.literal("dueDate"), value: optionalDay }),
+]);
+
+/** Inline table edits (priority, effort, due date) — one cell at a time, like a Notion database. */
+export async function setTaskField(id: string, field: string, value: string): Promise<void> {
+  await requireSession();
+  const parsed = FieldInput.safeParse({ id, field, value });
+  if (!parsed.success) return;
+  const { field: key, value: next } = parsed.data;
+  const db = await getDb();
+  await db.update(tasks).set({ [key]: next, updatedAt: new Date() }).where(eq(tasks.id, parsed.data.id));
+  refresh();
+}
+
 export async function setTaskStatus(id: string, status: string): Promise<void> {
   await requireSession();
   const parsed = z.object({ id: uuid, status: z.enum(TASK_STATUSES) }).safeParse({ id, status });
