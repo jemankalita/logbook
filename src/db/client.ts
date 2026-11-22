@@ -16,9 +16,21 @@ export type Db = PostgresJsDatabase<typeof schema>;
 
 const globalForDb = globalThis as unknown as { __logbookDb?: Promise<Db> };
 
+// Supabase's session pooler (port 5432) caps clients at the pool size (15 on the
+// free tier). Serverless instances each hold their own pool, so keep it tiny and
+// hand idle connections back quickly. (The transaction pooler on 6543 is not used:
+// postgres-js pipelines queries, which it doesn't handle, and requests hang.)
+const POOL_MAX = 2;
+const IDLE_TIMEOUT_S = 15;
+const CONNECT_TIMEOUT_S = 10;
+
 async function createPostgresDb(url: string): Promise<Db> {
-  // prepare:false is required by Supabase's transaction pooler (port 6543).
-  const client = postgres(url, { prepare: false, max: 5 });
+  const client = postgres(url, {
+    prepare: false,
+    max: POOL_MAX,
+    idle_timeout: IDLE_TIMEOUT_S,
+    connect_timeout: CONNECT_TIMEOUT_S,
+  });
   return drizzlePostgres(client, { schema });
 }
 

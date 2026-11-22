@@ -52,15 +52,15 @@ All configuration is through environment variables — see [`.env.example`](.env
 | `SESSION_SECRET` | yes | Signs the login cookie — `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
 | `APP_TIMEZONE` | no | IANA timezone that decides when "today" rolls over |
 | `OWNER_NAME` | no | First name for the dashboard greeting |
-| `DATABASE_URL` | prod | Postgres connection string (e.g. Supabase transaction pooler) |
+| `DATABASE_URL` | prod | Postgres connection string (Supabase **session** pooler, port 5432) |
 | `GOOGLE_CALENDAR_ICS_URLS` | no | Secret iCal address(es) of your Google calendars, comma-separated |
 | `NOTION_TOKEN`, `NOTION_ROOT_PAGE` | no | Only while running the one-time Notion import |
 
 ## Deploy (Vercel + Supabase, free tiers)
 
-1. **Supabase** → New project → *Project Settings → Database → Connection string → Transaction pooler* (port 6543).
-2. Create the tables once: `DATABASE_URL="postgresql://…:6543/postgres" npm run db:migrate`
-3. Import the repo in **Vercel** and add the environment variables above.
+1. **Supabase** → New project → **Connect** → *Connection string* → **Session pooler** (port 5432). Replace `[YOUR-PASSWORD]` with your password — without the brackets. Don't use the transaction pooler (6543): the `postgres` driver pipelines queries and requests hang there.
+2. Create the tables once: `DATABASE_URL="postgresql://…:5432/postgres" npm run db:migrate`
+3. Import the repo in **Vercel** and add the environment variables above. `vercel.json` pins functions to Singapore (`sin1`); change it to the region nearest your Supabase project.
 4. In Vercel → Settings → **Deployment Protection**, turn it on for Preview deployments.
 
 Lost a device? Sidebar → **Sign out everywhere** invalidates every existing login at once.

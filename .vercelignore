@@ -1,0 +1,8 @@
+# Never upload secrets or the local embedded database.
+.env*
+!.env.example
+.data
+.next
+node_modules
+coverage
+*.tsbuildinfo
