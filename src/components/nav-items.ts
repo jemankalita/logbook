@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CalendarDays,
   CheckSquare,
+  ClipboardCheck,
   Compass,
   FileText,
   LayoutDashboard,
@@ -47,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Goals",
     items: [
+      { href: "/review", label: "Weekly review", icon: ClipboardCheck },
       { href: "/opportunities", label: "Opportunities", icon: Trophy },
       { href: "/paths", label: "Paths", icon: Compass },
       { href: "/insights", label: "Insights", icon: LineChart },

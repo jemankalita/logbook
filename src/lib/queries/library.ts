@@ -7,9 +7,9 @@ export type Item = typeof items.$inferSelect;
 export type Folder = typeof folders.$inferSelect;
 
 export interface FolderNode extends Folder {
-  /** links directly in this folder */
+  /** links and pages directly in this folder */
   count: number;
-  /** links in this folder and all sub-folders */
+  /** links and pages in this folder and all sub-folders */
   total: number;
   children: FolderNode[];
   depth: number;
@@ -37,12 +37,19 @@ export function buildFolderTree(rows: Folder[], counts: ReadonlyMap<string | nul
   return roots;
 }
 
-/** Folders as a tree, sorted by position then name, with link counts. */
+/**
+ * Folders as a tree, sorted by position then name. Counts include pages (notes filed in a folder,
+ * e.g. Notion rows without a link) as well as links, so a folder never claims to be empty when it isn't.
+ */
 export async function getFolderTree(): Promise<FolderNode[]> {
   const db = await getDb();
   const [rows, counts] = await Promise.all([
     db.select().from(folders).orderBy(asc(folders.position), asc(folders.name)),
-    db.select({ folderId: items.folderId, n: count() }).from(items).where(eq(items.kind, "link")).groupBy(items.folderId),
+    db
+      .select({ folderId: items.folderId, n: count() })
+      .from(items)
+      .where(inArray(items.kind, ["link", "note"]))
+      .groupBy(items.folderId),
   ]);
   return buildFolderTree(rows, new Map(counts.map((c) => [c.folderId, Number(c.n)])));
 }

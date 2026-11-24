@@ -21,5 +21,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Public: build assets, and what the browser needs to install the app (manifest, icons, service worker).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|sw.js|offline.html|pwa-icon/).*)"],
+  // api/backup authenticates itself (session or bearer token) so the scheduled job isn't sent to /login.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|sw.js|offline.html|pwa-icon/|api/backup).*)"],
 };

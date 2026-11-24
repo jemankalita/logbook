@@ -148,6 +148,33 @@ export async function getAreas(): Promise<string[]> {
   return rows.map((r) => r.area as string);
 }
 
+export type OverdueFix = "today" | "clear";
+
+/**
+ * Bulk-fix a list's past-due tasks: move them all to today, or drop their dates.
+ * Only open, one-off tasks are touched — habits and finished tasks keep their dates.
+ */
+export async function rescheduleOverdueTasks(horizon: "daily" | "upcoming", today: Day, fix: OverdueFix): Promise<number> {
+  const db = await getDb();
+  const moved = await db
+    .update(tasks)
+    .set({ dueDate: fix === "today" ? today : null, updatedAt: new Date() })
+    .where(and(eq(tasks.horizon, horizon), isNull(tasks.recurrence), ne(tasks.status, "done"), sql`${tasks.dueDate} < ${today}`))
+    .returning({ id: tasks.id });
+  return moved.length;
+}
+
+/** Open tasks not yet attached to any path — candidates for "Add an existing task" on a path. */
+export async function getUnlinkedOpenTasks(limit = 200): Promise<Pick<Task, "id" | "title" | "horizon">[]> {
+  const db = await getDb();
+  return db
+    .select({ id: tasks.id, title: tasks.title, horizon: tasks.horizon })
+    .from(tasks)
+    .where(and(isNull(tasks.pathId), isNull(tasks.recurrence), isNull(tasks.parentId), ne(tasks.status, "done")))
+    .orderBy(asc(tasks.title))
+    .limit(limit);
+}
+
 export async function getTasksForPath(pathId: string): Promise<Task[]> {
   const db = await getDb();
   return db.select().from(tasks).where(eq(tasks.pathId, pathId)).orderBy(asc(tasks.status), asc(tasks.dueDate), asc(tasks.createdAt));

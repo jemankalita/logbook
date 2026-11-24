@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
-import { AlertCircle, Calendar, ChevronRight, CircleDot, Gauge, List, Plus, Search, Signal, Table2, Trash2, Type } from "lucide-react";
-import { deleteTask, setTaskField, setTaskStatus } from "@/app/(app)/tasks/actions";
+import { AlertCircle, Calendar, CalendarClock, CalendarX, ChevronRight, CircleDot, Gauge, List, Plus, Search, Signal, Table2, Trash2, Type } from "lucide-react";
+import { deleteTask, fixOverdueTasks, setTaskField, setTaskStatus } from "@/app/(app)/tasks/actions";
 import type { Day } from "@/lib/dates";
 import type { Task } from "@/lib/queries/tasks";
 import { cls } from "../cls";
@@ -62,6 +62,8 @@ export function TaskTable({ title, description, horizon, tasks, today, options, 
   const open = filtered.filter((t) => t.status !== "done");
   const done = filtered.filter((t) => t.status === "done");
   const pastDue = open.filter((t) => t.dueDate && t.dueDate < today).length;
+  // The bulk fix acts on the whole list, so count without the search filter.
+  const totalPastDue = tasks.filter((t) => t.status !== "done" && t.dueDate && t.dueDate < today).length;
 
   const pick = (l: Layout) => {
     setLayout(l);
@@ -77,7 +79,8 @@ export function TaskTable({ title, description, horizon, tasks, today, options, 
   return (
     <section className={`${cls.card} overflow-hidden`}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line px-5 py-4">
-        <div className="min-w-0 flex-1">
+        {/* min width forces the title onto its own row on phones instead of squeezing beside the search box */}
+        <div className="min-w-[min(100%,18rem)] flex-1">
           <h2 className="text-lg font-semibold tracking-[-0.01em]">{title}</h2>
           <p className="mt-0.5 text-[13px] text-muted">
             {description}
@@ -91,7 +94,7 @@ export function TaskTable({ title, description, horizon, tasks, today, options, 
         <label className="relative">
           <span className="sr-only">Search {title}</span>
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-faint" aria-hidden />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className={`${cls.input} h-8 w-44 pl-8`} />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className={`${cls.input} h-8 w-40 pl-8 sm:w-44`} />
         </label>
         <div className={cls.segment} role="group" aria-label="Layout">
           {(
@@ -107,6 +110,8 @@ export function TaskTable({ title, description, horizon, tasks, today, options, 
           ))}
         </div>
       </header>
+
+      {totalPastDue ? <OverdueBar count={totalPastDue} horizon={horizon} /> : null}
 
       {layout === "table" ? (
         <div className="overflow-x-auto">
@@ -163,6 +168,31 @@ export function TaskTable({ title, description, horizon, tasks, today, options, 
         )}
       </footer>
     </section>
+  );
+}
+
+/** Past-due tasks nag forever otherwise: one click moves them all to today or clears their dates. */
+function OverdueBar({ count, horizon }: { count: number; horizon: "daily" | "upcoming" }) {
+  const [pending, start] = useTransition();
+  const run = (fix: "today" | "clear") => start(() => fixOverdueTasks(horizon, fix));
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-danger/[0.06] px-5 py-2.5 text-[13px]">
+      <AlertCircle className="size-4 shrink-0 text-danger" aria-hidden />
+      <span className="min-w-[min(100%,11rem)] flex-1 text-muted">
+        <span className="font-medium text-fg">{count}</span> {count === 1 ? "task is" : "tasks are"} past due.
+      </span>
+      <button type="button" disabled={pending} onClick={() => run("today")} className={`${cls.btn} h-7 px-2.5 text-[12px]`}>
+        <CalendarClock className="size-3.5" aria-hidden /> Move to today
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => window.confirm(`Remove the due date from ${count} past-due ${count === 1 ? "task" : "tasks"}?`) && run("clear")}
+        className={`${cls.btnGhost} h-7 text-[12px]`}
+      >
+        <CalendarX className="size-3.5" aria-hidden /> Clear dates
+      </button>
+    </div>
   );
 }
 

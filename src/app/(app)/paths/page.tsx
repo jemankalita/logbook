@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/ui";
 import { createPath } from "./actions";
 import { PageHeader } from "@/components/page-ui";
 import { Emoji } from "@/components/emoji";
+import { excerpt } from "@/lib/rich-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Paths · Logbook" };
@@ -19,6 +20,7 @@ export default async function PathsPage() {
       name: paths.name,
       emoji: paths.emoji,
       description: paths.description,
+      bodyText: paths.bodyText,
       total: count(tasks.id),
       done: sql<number>`count(*) filter (where ${tasks.status} = 'done')`.mapWith(Number),
     })
@@ -43,15 +45,19 @@ export default async function PathsPage() {
                   </span>
                   {p.name}
                 </span>
-                {p.description ? <span className="line-clamp-2 text-sm text-muted">{p.description}</span> : null}
-                <span className="mt-auto flex items-center gap-2 text-xs text-muted">
-                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-2">
-                    <span className="block h-full bg-success" style={{ width: `${pct}%` }} />
+                {p.description || p.bodyText ? <span className="line-clamp-2 text-sm text-muted">{p.description || excerpt(p.bodyText, 180)}</span> : null}
+                {total ? (
+                  <span className="mt-auto flex items-center gap-2 pt-1 text-xs text-muted">
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-2">
+                      <span className="block h-full bg-success" style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="tabular">
+                      {p.done}/{total} tasks
+                    </span>
                   </span>
-                  <span className="tabular">
-                    {p.done}/{total} tasks
-                  </span>
-                </span>
+                ) : (
+                  <span className="mt-auto pt-1 text-xs text-faint">No tasks yet — open it to add or link some</span>
+                )}
               </Link>
             </li>
           );

@@ -1,19 +1,20 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { taskCompletions, tasks } from "@/db/schema";
+import { items, paths, taskCompletions, tasks } from "@/db/schema";
 import { failure, firstIssue, formFields, optionalDay, optionalText, requiredText, uuid, type ActionResult } from "@/lib/actions";
 import { requireSession } from "@/lib/auth/require-session";
 import { appTimezone, dayInTimezone, today } from "@/lib/dates";
-import { EFFORTS, PRIORITIES, TASK_HORIZONS, TASK_STATUSES } from "@/lib/queries/tasks";
+import { EFFORTS, PRIORITIES, rescheduleOverdueTasks, TASK_HORIZONS, TASK_STATUSES } from "@/lib/queries/tasks";
 import { parseRecurrence } from "@/lib/tasks/recurrence";
 
 function refresh() {
   revalidatePath("/tasks");
   revalidatePath("/");
+  revalidatePath("/review");
   revalidatePath("/paths", "layout");
   revalidatePath("/insights");
 }
@@ -175,6 +176,57 @@ export async function snoozeTask(id: string): Promise<void> {
     .set({ dueDate: tomorrow.toISOString().slice(0, 10), updatedAt: new Date() })
     .where(eq(tasks.id, id));
   refresh();
+}
+
+/** "Move all past-due to today" / "Clear their dates" on a task list. */
+export async function fixOverdueTasks(horizon: string, fix: string): Promise<void> {
+  await requireSession();
+  const parsed = z.object({ horizon: z.enum(["daily", "upcoming"]), fix: z.enum(["today", "clear"]) }).safeParse({ horizon, fix });
+  if (!parsed.success) return;
+  await rescheduleOverdueTasks(parsed.data.horizon, today(), parsed.data.fix);
+  refresh();
+}
+
+/** Attach an existing task to a path (from the path page). */
+export async function linkTaskToPath(pathId: string, fd: FormData): Promise<void> {
+  await requireSession();
+  const parsed = z.object({ pathId: uuid, taskId: uuid }).safeParse({ pathId, taskId: fd.get("taskId") });
+  if (!parsed.success) return;
+  const db = await getDb();
+  try {
+    const [path] = await db.select({ id: paths.id }).from(paths).where(eq(paths.id, parsed.data.pathId)).limit(1);
+    if (!path) return;
+    // Only open, one-off, top-level tasks are offered in the picker; enforce the same here.
+    await db
+      .update(tasks)
+      .set({ pathId: parsed.data.pathId, updatedAt: new Date() })
+      .where(and(eq(tasks.id, parsed.data.taskId), isNull(tasks.parentId), isNull(tasks.recurrence), ne(tasks.status, "done")));
+  } catch (err) {
+    console.error("[tasks] linkTaskToPath failed", err);
+    return;
+  }
+  refresh();
+}
+
+/** A title-only note (e.g. a Notion row with no content) is really a to-do: move it to Overall To-Do. */
+export async function convertNoteToTask(noteId: string): Promise<void> {
+  await requireSession();
+  if (!uuid.safeParse(noteId).success) return;
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const [note] = await tx
+      .select({ title: items.title, bodyText: items.bodyText, starred: items.starred })
+      .from(items)
+      .where(and(eq(items.id, noteId), eq(items.kind, "note")))
+      .limit(1);
+    // Re-check inside the transaction: the note may have gained content since the page rendered.
+    if (!note || note.starred || (note.bodyText ?? "").trim() !== "") return;
+    await tx.insert(tasks).values({ title: note.title.slice(0, 300), horizon: "upcoming", status: "not_started" });
+    await tx.delete(items).where(eq(items.id, noteId));
+  });
+  refresh();
+  revalidatePath("/notes");
+  revalidatePath("/library");
 }
 
 export async function deleteTask(id: string): Promise<void> {

@@ -102,11 +102,21 @@ async function loadSnapshot(firstDay: Day, dayCount: number): Promise<CalendarSn
   return { fetchedAt: new Date().toISOString(), calendars, events };
 }
 
+/**
+ * The current hour as a cache-key part. `revalidate` alone is stale-while-revalidate: with one
+ * visitor, a view opened a day later is first served the day-old snapshot. Keying by the hour
+ * means an expired hour is a cache miss, so the page always shows data from this hour.
+ */
+export function cacheHour(nowMs: number = Date.now()): number {
+  return Math.floor(nowMs / (CALENDAR_REVALIDATE_SECONDS * 1000));
+}
+
 const cachedSnapshot = unstable_cache(
-  // The 2nd argument is never read: arguments form the cache key, so changing the URLs busts the cache.
+  // The last two arguments are never read: arguments form the cache key, so changing the URLs
+  // or entering a new hour busts the cache.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (firstDay: Day, dayCount: number, _feedsKey: string) => loadSnapshot(firstDay, dayCount),
-  ["calendar-snapshot-v2"],
+  (firstDay: Day, dayCount: number, _feedsKey: string, _hour: number) => loadSnapshot(firstDay, dayCount),
+  ["calendar-snapshot-v3"],
   { revalidate: CALENDAR_REVALIDATE_SECONDS, tags: [CALENDAR_TAG] },
 );
 
@@ -122,7 +132,7 @@ export async function getCalendarSnapshot(firstDay: Day, dayCount: number = AGEN
   const feedsKey = createHash("sha256").update(urls.join("\n")).digest("hex").slice(0, 16);
   try {
     const days = Math.min(Math.max(1, Math.round(dayCount)), MAX_RANGE_DAYS);
-    return { state: "ok", snapshot: await cachedSnapshot(firstDay, days, feedsKey) };
+    return { state: "ok", snapshot: await cachedSnapshot(firstDay, days, feedsKey, cacheHour()) };
   } catch (err) {
     return { state: "error", error: describeError(err) };
   }

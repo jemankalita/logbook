@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Bookmark, FolderPlus, Inbox, Pencil, Search, SearchX, Upload } from "lucide-react";
+import { Bookmark, FileText, FolderPlus, Inbox, Pencil, Search, SearchX, Upload } from "lucide-react";
+import { excerpt } from "@/lib/rich-text";
 import { cls } from "@/components/cls";
 import { FolderTree, type FolderSelection } from "@/components/library/folder-tree";
 import { AddLinkForm, FolderForm } from "@/components/library/forms";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Library · Logbook" };
 
 const PAGE_SIZE = 60;
+const PAGES_LIMIT = 100;
 
 interface Params {
   folder?: string;
@@ -53,14 +55,12 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const current = selected.kind === "folder" ? flat.find((f) => f.id === selected.id) : undefined;
   const crumbs = current ? folderBreadcrumbs(tree, current.id) : [];
 
-  const { rows, total } = await listItems({
-    folderIds: selected.kind === "folder" ? descendantIds(tree, selected.id) : selected.kind === "unsorted" ? "unsorted" : undefined,
-    starred: selected.kind === "starred",
-    q,
-    status,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const folderIds = selected.kind === "folder" ? descendantIds(tree, selected.id) : selected.kind === "unsorted" ? "unsorted" : undefined;
+  const [{ rows, total }, pages] = await Promise.all([
+    listItems({ folderIds, starred: selected.kind === "starred", q, status, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+    // Pages (notes) filed in this folder: shown above the links so imported Notion rows aren't invisible here.
+    selected.kind === "folder" && page === 1 && !status ? listItems({ folderIds, kind: "note", q, limit: PAGES_LIMIT }) : Promise.resolve({ rows: [], total: 0 }),
+  ]);
 
   const title = current ? current.name : selected.kind === "starred" ? "Starred" : selected.kind === "unsorted" ? "Unsorted" : "Library";
   const editing = Boolean(current && params.edit === "1");
@@ -108,7 +108,10 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
               {current?.emoji ? <Emoji char={current.emoji} size="0.9em" className="mr-3" /> : null}
               {title}
             </h1>
-            <span className="tabular text-sm text-muted">{total} {total === 1 ? "link" : "links"}</span>
+            <span className="tabular text-sm text-muted">
+              {total} {total === 1 ? "link" : "links"}
+              {pages.total ? ` · ${pages.total} ${pages.total === 1 ? "page" : "pages"}` : ""}
+            </span>
             {current ? (
               <Link href={hrefWith(params, { edit: editing ? undefined : "1" })} className={`${cls.btnGhost} self-center`}>
                 <Pencil className="size-4" aria-hidden /> {editing ? "Close" : "Edit folder"}
@@ -146,7 +149,28 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
           />
         </div>
 
-        {rows.length === 0 ? (
+        {pages.rows.length ? (
+          <section aria-labelledby="folder-pages">
+            <h2 id="folder-pages" className={`${cls.eyebrow} mb-2`}>
+              Pages
+            </h2>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {pages.rows.map((n) => (
+                <li key={n.id}>
+                  <Link href={`/notes/${n.id}`} className={`${cls.card} ${cls.cardHover} flex items-start gap-3 p-3`}>
+                    <FileText className="mt-0.5 size-4 shrink-0 text-faint" aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{n.title}</span>
+                      <span className="line-clamp-1 text-xs text-muted">{excerpt(n.bodyText, 120) || "Title only — open to add notes"}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {rows.length === 0 && pages.rows.length > 0 && !q ? null : rows.length === 0 ? (
           q ? (
             <EmptyState icon={SearchX} title={`Nothing matches “${q}”`}>Try a shorter search, or clear the status filter.</EmptyState>
           ) : counts.links === 0 ? (

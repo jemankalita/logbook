@@ -18,6 +18,7 @@ Built with Next.js 15, React 19, Tailwind CSS 4, Drizzle ORM and Postgres (embed
 | **Opportunities** | Pipeline board (inbox → result) with deadlines and countdowns |
 | **Paths** | Long-term goals with notes and their own tasks |
 | **Lists** | Watchlist, people to follow, anything else |
+| **Weekly review** | What got done, what carries over (move it to next week in one click), plan next week, a short reflection, and a weekly-review streak; the dashboard reminds you on Fridays |
 | **Insights** | Weekly charts, mood trend, where your hours go, and an interactive knowledge graph |
 
 Also: light & dark themes, Apple-style emoji on every platform, a one-time **Notion importer**, Chrome-bookmarks import, a **Chrome extension**, a bookmarklet, and an installable **PWA** with share-to-save on Android.
@@ -55,6 +56,7 @@ All configuration is through environment variables — see [`.env.example`](.env
 | `DATABASE_URL` | prod | Postgres connection string (Supabase **session** pooler, port 5432) |
 | `GOOGLE_CALENDAR_ICS_URLS` | no | Secret iCal address(es) of your Google calendars, comma-separated |
 | `NOTION_TOKEN`, `NOTION_ROOT_PAGE` | no | Only while running the one-time Notion import |
+| `BACKUP_TOKEN` | no | Lets a scheduled job fetch `/api/backup` (32+ random chars) — see [Backups](#backups--keeping-supabase-awake) |
 
 ## Deploy (Vercel + Supabase, free tiers)
 
@@ -62,6 +64,17 @@ All configuration is through environment variables — see [`.env.example`](.env
 2. Create the tables once: `DATABASE_URL="postgresql://…:5432/postgres" npm run db:migrate`
 3. Import the repo in **Vercel** and add the environment variables above. `vercel.json` pins functions to Singapore (`sin1`); change it to the region nearest your Supabase project.
 4. In Vercel → Settings → **Deployment Protection**, turn it on for Preview deployments.
+
+### Backups & keeping Supabase awake
+
+Supabase's free plan pauses a project after about a week without activity. A daily request prevents that, and if that request is a backup you also get a copy of your data.
+
+- **By hand:** Library → Import → **Download backup** gives one JSON file with every table.
+- **Automatically:** set `BACKUP_TOKEN` on Vercel (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`), then run a daily job that saves the output of
+  `curl -fsS -H "Authorization: Bearer $BACKUP_TOKEN" https://<your-app>/api/backup`.
+  [`docs/backup-workflow.yml`](docs/backup-workflow.yml) is a ready-made GitHub Actions workflow: put it in a **private** repo as `.github/workflows/backup.yml` and add `LOGBOOK_URL` and `BACKUP_TOKEN` as repository secrets. It commits a backup every day, and GitHub emails you if a run fails.
+
+Never put backups in a public repo — they contain everything.
 
 Lost a device? Sidebar → **Sign out everywhere** invalidates every existing login at once.
 

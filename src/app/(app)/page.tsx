@@ -15,7 +15,9 @@ import { appTimezone, formatDay, today, type Day } from "@/lib/dates";
 import { buildHeatmap, computeStreaks, HEATMAP_MODES, parseMode, type ActivityInput, type HeatmapMode } from "@/lib/heatmap";
 import { getActivity, getAttendanceFor } from "@/lib/queries/activity";
 import { recentLinks } from "@/lib/queries/library";
+import { getReviewedWeeks } from "@/lib/queries/review";
 import { getHabits, getTodayTasks } from "@/lib/queries/tasks";
+import { WeeklyReviewCard } from "@/components/review/review-card";
 
 export const dynamic = "force-dynamic";
 
@@ -84,13 +86,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayDay = today();
   const now = new Date();
 
-  const [activity, todayAttendance, calendar, recent, todayTasks, habits] = await Promise.all([
+  const [activity, todayAttendance, calendar, recent, todayTasks, habits, reviewedWeeks] = await Promise.all([
     getActivity(), // full history so streaks aren't capped at a year
     getAttendanceFor(todayDay),
     getCalendarSnapshot(todayDay),
     recentLinks(RECENT_LINKS),
     getTodayTasks(todayDay),
     getHabits(todayDay),
+    getReviewedWeeks(),
   ]);
 
   const heatmap = buildHeatmap(todayDay, mode, activity, HEATMAP_WEEKS);
@@ -126,6 +129,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <CheckInCard checkedInLabel={checkedInLabel} streak={attendanceStreak} />
         <TodayCard todayDay={todayDay} tasks={todayTasks} habits={habits.scheduled} />
         <TodaySchedule result={calendar} todayDay={todayDay} timeZone={timeZone} now={now} />
+      </div>
+
+      <div className="rise -mt-4" style={{ "--i": 1 } as React.CSSProperties}>
+        <WeeklyReviewCard today={todayDay} reviewed={reviewedWeeks} />
       </div>
 
       <section className={`${cls.card} rise overflow-hidden`} style={{ "--i": 2 } as React.CSSProperties}>

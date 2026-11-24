@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { Download } from "lucide-react";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { items } from "@/db/schema";
@@ -44,6 +45,19 @@ export default async function ImportPage() {
     <div className="rise mx-auto flex max-w-3xl flex-col gap-5">
       <BackLink href="/library">Library</BackLink>
       <PageHeader title="Import & capture" description="Bring in what you already have, and set up one-click saving from your browser and phone." />
+
+      <section className={`${cls.card} flex flex-wrap items-center gap-x-4 gap-y-3 p-5`}>
+        <div className="min-w-[min(100%,16rem)] flex-1">
+          <h2 className="font-medium">Back up everything</h2>
+          <p className="mt-1 text-sm text-muted">
+            One JSON file with all your tasks, notes, library, journal, paths and reviews. A backup also runs automatically every day{process.env.BACKUP_TOKEN ? "" : " once it's set up (see the README)"}.
+          </p>
+        </div>
+        {/* A plain link: the route streams a file download, so client-side navigation would be wrong here. */}
+        <a href="/api/backup" download className={cls.btn}>
+          <Download className="size-4" aria-hidden /> Download backup
+        </a>
+      </section>
 
       <Step n={1} title="Import Chrome bookmarks">
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
