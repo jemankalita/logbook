@@ -3,7 +3,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "@/db/client";
+import { setDbForTests, type Db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { BACKUP_TABLES, buildBackup, isBackupTokenValid, MIN_BACKUP_TOKEN_LENGTH } from "./backup";
 import { getFolderTree } from "./queries/library";
@@ -19,11 +19,11 @@ beforeAll(async () => {
   const pg = drizzle(client, { schema });
   await migrate(pg, { migrationsFolder: path.join(process.cwd(), "drizzle") });
   db = pg as unknown as Db;
-  (globalThis as unknown as { __logbookDb?: Promise<Db> }).__logbookDb = Promise.resolve(db);
+  setDbForTests(db);
 }, 60_000);
 
 afterAll(async () => {
-  (globalThis as unknown as { __logbookDb?: Promise<Db> }).__logbookDb = undefined;
+  setDbForTests(undefined);
   await client.close();
 });
 

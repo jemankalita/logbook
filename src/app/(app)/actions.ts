@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { attendance } from "@/db/schema";
-import { requireSession } from "@/lib/auth/require-session";
+import { requireSession, SESSION_CUTOFF_TAG } from "@/lib/auth/require-session";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 import { CALENDAR_TAG } from "@/lib/calendar/feeds";
 import { today } from "@/lib/dates";
@@ -44,6 +44,7 @@ export async function signOutEverywhere(): Promise<void> {
   await requireSession();
   // Tokens carry whole-second issue times; +1 makes anything issued up to now invalid.
   await setSetting(SESSIONS_VALID_AFTER, Math.floor(Date.now() / 1000) + 1);
+  revalidateTag(SESSION_CUTOFF_TAG);
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/login");
 }
